@@ -4,8 +4,9 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.net.nsd.NsdManager
-import androidx.core.content.ContextCompat.getSystemService
+import androidx.room.Room
 import cz.vasabi.myiot.backend.DeviceManager
+import cz.vasabi.myiot.backend.database.AppDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,7 +20,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object injection {
+object Injection {
     @Provides
     @Singleton
     fun provideClient(): HttpClient {
@@ -32,8 +33,8 @@ object injection {
 
     @Provides
     @Singleton
-    fun provideDeviceManager(): DeviceManager {
-        return DeviceManager()
+    fun provideDeviceManager(db: AppDatabase, client: HttpClient): DeviceManager {
+        return DeviceManager(db, client)
     }
 
     @Provides
@@ -47,5 +48,14 @@ object injection {
     fun provideBluetoothAdapter(@ApplicationContext ctx: Context): BluetoothAdapter {
         val bluetoothManager = ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         return bluetoothManager.adapter
+    }
+
+    @Provides
+    @Singleton
+    fun provideDatabase(@ApplicationContext ctx: Context): AppDatabase {
+        return Room.databaseBuilder(
+            ctx,
+            AppDatabase::class.java, "app-database"
+        ).build()
     }
 }

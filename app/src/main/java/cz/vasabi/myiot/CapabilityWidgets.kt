@@ -43,6 +43,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import cz.vasabi.myiot.backend.DeviceCapability
 import cz.vasabi.myiot.backend.DeviceCapabilityState
+import cz.vasabi.myiot.backend.api.Data
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel

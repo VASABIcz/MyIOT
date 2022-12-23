@@ -44,13 +44,14 @@ import cz.vasabi.myiot.viewModels.DevicesViewModel
 import kotlinx.coroutines.CoroutineScope
 
 @Composable
-fun DevicesPage(scope: CoroutineScope, viewModel: DevicesViewModel = hiltViewModel()) {
+fun DevicesPage(viewModel: DevicesViewModel = hiltViewModel()) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     ModalDrawer(
         drawerContent = {
             LazyColumn {
                 items(viewModel.devices.values.toList()) {
                     DrawDevice(it, {
+                        viewModel.selectedDevice.value = it
                     })
                 }
             }

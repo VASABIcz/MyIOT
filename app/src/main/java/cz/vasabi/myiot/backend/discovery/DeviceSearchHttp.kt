@@ -6,7 +6,9 @@ import android.net.nsd.NsdServiceInfo
 import android.util.Log
 import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.DeviceConnection
+import cz.vasabi.myiot.backend.HttpConnectionInfo
 import cz.vasabi.myiot.backend.HttpDeviceConnection
+import cz.vasabi.myiot.backend.NsdHttpConnectionInfo
 import io.ktor.client.HttpClient
 
 class HttpDeviceResolver(private val onDeviceResolved: (NsdServiceInfo) -> Unit): NsdManager.ResolveListener {
@@ -30,7 +32,7 @@ class HttpDeviceDiscoveryService(nsdManager: NsdManager, private val discoverySt
 
     override fun onServiceFound(service: NsdServiceInfo) {
         nsdManager.resolveService(service, HttpDeviceResolver {
-            onDeviceResolved(HttpDeviceConnection(it, client))
+            onDeviceResolved(HttpDeviceConnection(NsdHttpConnectionInfo(it), client))
         })
         super.onServiceFound(service)
     }
