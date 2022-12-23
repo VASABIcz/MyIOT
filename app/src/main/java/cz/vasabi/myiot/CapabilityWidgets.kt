@@ -41,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import cz.vasabi.myiot.backend.DeviceCapability
+import cz.vasabi.myiot.backend.DeviceCapabilityState
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -62,7 +64,7 @@ enum class StringWidgetType {
 
 @SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
-fun BoolWidget(capability: BetterCapability, device: WholeFufuDevice) {
+fun BoolWidget(capability: DeviceCapabilityState) {
     val scope = rememberCoroutineScope()
     var showEdit by remember {
         mutableStateOf(false)
@@ -129,8 +131,8 @@ fun BoolWidget(capability: BetterCapability, device: WholeFufuDevice) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            androidx.compose.material3.Text(capability.capability.name)
-            androidx.compose.material3.Text(capability.capability.description)
+            androidx.compose.material3.Text(capability.name)
+            androidx.compose.material3.Text(capability.description)
 
             when (selectedStyle) {
                 BoolWidgetType.Switch -> {
@@ -167,7 +169,7 @@ fun BoolWidget(capability: BetterCapability, device: WholeFufuDevice) {
 @OptIn(InternalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
-fun StringWidget(capability: BetterCapability, device: WholeFufuDevice) {
+fun StringWidget(capability: DeviceCapabilityState) {
     val inputFlow = Channel<String>()
 
     val scope = rememberCoroutineScope()
@@ -217,8 +219,8 @@ fun StringWidget(capability: BetterCapability, device: WholeFufuDevice) {
         })
     }
 
-    androidx.compose.material3.Text(capability.capability.name)
-    androidx.compose.material3.Text(capability.capability.description)
+    androidx.compose.material3.Text(capability.name)
+    androidx.compose.material3.Text(capability.description)
 
 
     when (selectedStyle) {
@@ -256,7 +258,7 @@ fun StringWidget(capability: BetterCapability, device: WholeFufuDevice) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IntWidget(capability: BetterCapability, device: WholeFufuDevice) {
+fun IntWidget(capability: DeviceCapabilityState) {
     val scope = rememberCoroutineScope()
 
     var value by remember {
@@ -275,8 +277,8 @@ fun IntWidget(capability: BetterCapability, device: WholeFufuDevice) {
         }
     }
 
-    Text(capability.capability.name)
-    Text(capability.capability.description)
+    Text(capability.name)
+    Text(capability.description)
 
     OutlinedTextField(
         value = unCommited,

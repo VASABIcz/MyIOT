@@ -117,11 +117,7 @@ sealed interface BaseContainer {
 sealed class DataTyp {
 }
 
-sealed interface DeviceCapability {
-    var name: String
-    var description: String?
-}
-
+/*
 interface ReadableCompatibility: DeviceCapability {
     fun readValue(): CustomDataType {
         throw Exception()
@@ -168,3 +164,5 @@ interface Device: DeviceInfo {
      */
     var capabilities: List<DeviceCapability>
 }
+
+ */
