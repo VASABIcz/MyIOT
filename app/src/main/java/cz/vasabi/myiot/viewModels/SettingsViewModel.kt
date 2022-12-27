@@ -14,5 +14,7 @@ class SettingsViewModel @Inject constructor(val database: AppDatabase): ViewMode
         database.deviceDao().wipeTable()
         database.httpCapabilityDao().wipeTable()
         database.httpConnectionsDao().wipeTable()
+        database.tcpCapabilityDao().wipeTable()
+        database.tcpConnectionsDao().wipeTable()
     }
 }

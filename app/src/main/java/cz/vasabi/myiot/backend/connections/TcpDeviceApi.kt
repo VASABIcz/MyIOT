@@ -11,14 +11,16 @@ import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
 import cz.vasabi.myiot.backend.database.TcpDeviceConnectionEntity
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Connection
-import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
+import io.ktor.network.sockets.isClosed
+import io.ktor.utils.io.readUTF8Line
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -51,29 +53,85 @@ internal sealed interface TcpRequest {
     class Get(val route: String) : TcpRequest
 }
 
+internal class TcpConnectionManager(
+    var host: String,
+    var port: Int,
+    var onConnectionChanged: suspend (ConnectionState) -> Unit
+) {
+    private val selectorManager = SelectorManager(Dispatchers.IO)
+    private var socket: Connection? = null
+
+    suspend fun reconnect() {
+        if (socket?.socket?.isClosed == true) return
+        while (true) {
+            try {
+                socket = aSocket(selectorManager).tcp().connect(host, port) {
+                    noDelay = true
+                    sendBufferSize = 1
+                }.connection()
+                onConnectionChanged(ConnectionState.Connected)
+                break
+            } catch (t: Throwable) {
+                Log.w(TAG, "socket reconnect ${t.message}")
+                delay(1000)
+            }
+        }
+    }
+
+    suspend fun readLine(): String {
+        while (true) {
+            try {
+                return socket?.input?.readUTF8Line() ?: continue
+            } catch (t: Throwable) {
+                Log.w(TAG, "socket readLine ${t.message}")
+                onConnectionChanged(ConnectionState.Disconnected)
+                reconnect()
+            }
+        }
+    }
+
+    suspend fun write(line: String) {
+        while (true) {
+            try {
+                socket?.output?.writeStringUtf8(line)
+                socket?.output?.flush()
+                return
+            } catch (t: Throwable) {
+                Log.w(TAG, "socket write ${t.message}")
+                onConnectionChanged(ConnectionState.Disconnected)
+                reconnect()
+            }
+        }
+    }
+
+    fun close() {
+        socket?.socket?.close()
+        socket?.socket?.dispose()
+    }
+}
+
 class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: ObjectMapper) :
     DeviceConnection {
     override val connectionType: ConnectionType = ConnectionType.Tcp
     override var onConnectionChanged: suspend (ConnectionState) -> Unit = {}
+        set(value) {
+            connManager.onConnectionChanged = value
+            field = value
+        }
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val selectorManager = SelectorManager(Dispatchers.IO)
-    private val responseChannel = Channel<TcpResponse>(5)
-    private val capabilitiesChannel = Channel<CompletableDeferred<List<DeviceCapability>?>>(5)
-    private val requestChannel = Channel<TcpRequest>(5)
+    private val responseChannel = Channel<TcpResponse>()
+    private val capabilitiesChannel = Channel<CompletableDeferred<List<DeviceCapability>?>>()
+    private val requestChannel = Channel<TcpRequest>()
 
     private val capabilities = hashMapOf<String, MutableList<TcpDeviceCapability>>()
-    private lateinit var socket: Socket
-    private lateinit var conn: Connection
+    private val connManager = TcpConnectionManager(info.host, info.port, onConnectionChanged)
 
     override fun connect() {
         // TODO try catch
         scope.launch {
-            socket = aSocket(selectorManager).tcp().connect(info.host, info.port) {
-                noDelay = true
-                sendBufferSize = 1
-            }
-            conn = socket.connection()
+            connManager.reconnect()
             scope.launch {
                 socketReader()
             }
@@ -109,7 +167,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
 
     private suspend fun socketReader() {
         while (true) {
-            val message = conn.input.readUTF8Line(1024)
+            val message = connManager.readLine()
             Log.d(TAG, "message $message")
 
             if (message == null) {
@@ -172,19 +230,18 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
     private suspend fun handleRequests() {
         for (request in requestChannel) {
             when (request) {
-                TcpRequest.Capabilities -> conn.output.writeStringUtf8("capabilities\n")
-                is TcpRequest.Get -> conn.output.writeStringUtf8("get ${request.route}\n")
-                is TcpRequest.Post -> conn.output.writeStringUtf8("post ${request.route} ${request.data}\n")
+                TcpRequest.Capabilities -> connManager.write("capabilities\n")
+                is TcpRequest.Get -> connManager.write("get ${request.route}\n")
+                is TcpRequest.Post -> connManager.write("post ${request.route} ${request.data}\n")
             }
-            conn.output.flush()
             Log.e(TAG, "finished writing $request")
         }
     }
 
     override suspend fun disconnect() {
         withContext(Dispatchers.IO) {
-            socket.close()
             selectorManager.close()
+            connManager.close()
         }
     }
 
