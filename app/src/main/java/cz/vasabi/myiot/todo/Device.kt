@@ -1,15 +1,5 @@
 package cz.vasabi.myiot
 
-import java.lang.Exception
-import java.sql.Connection
-import java.util.UUID
-
-interface DeviceConnection {
-    /*
-    address
-    blpptppth, http, tcp etc..
-     */
-}
 
 interface CustomDataType {
     var name: String

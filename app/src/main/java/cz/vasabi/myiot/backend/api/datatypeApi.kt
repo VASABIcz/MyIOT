@@ -18,18 +18,26 @@ sealed interface Data {
         }
 
     val value: String
-        get() = when(this) {
+        get() = when (this) {
             is B -> this.b.toString()
             is F -> this.f.toString()
             is I -> this.i.toString()
-            is S -> "\"${this.s}\""
+            is S -> {
+                // FIXME proper string escaping
+                val res = this.s
+                    .replace("\n", "\\n")
+                "\"$res\""
+            }
         }
 
     val jsonBody: String
         get() = "{\"type\": \"${type}\", \"value\": ${value}}"
 }
 
-data class GenericResponse(@JsonFormat(shape = JsonFormat.Shape.STRING) val value: String, val type: String) {
+interface GenericResponse {
+    val value: String
+    val type: String
+
     fun toData(): Data {
         return when (type) {
             "bool" -> Data.B(value.toBoolean())
@@ -42,3 +50,8 @@ data class GenericResponse(@JsonFormat(shape = JsonFormat.Shape.STRING) val valu
         }
     }
 }
+
+data class GenericHttpResponse(
+    @JsonFormat(shape = JsonFormat.Shape.STRING) override val value: String,
+    override val type: String
+) : GenericResponse

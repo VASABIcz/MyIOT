@@ -1,4 +1,4 @@
-package cz.vasabi.myiot.pages
+package cz.vasabi.myiot.ui.pages
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.Button

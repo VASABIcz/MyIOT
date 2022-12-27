@@ -1,4 +1,4 @@
-package cz.vasabi.myiot
+package cz.vasabi.myiot.ui.components
 
 import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
@@ -11,13 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Icon
-import androidx.compose.material.Shapes
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
@@ -41,11 +37,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import cz.vasabi.myiot.backend.DeviceCapability
-import cz.vasabi.myiot.backend.DeviceCapabilityState
+import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.api.Data
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.InternalCoroutinesApi
+import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -67,37 +61,41 @@ enum class StringWidgetType {
 @Composable
 fun BoolWidget(capability: DeviceCapabilityState) {
     val scope = rememberCoroutineScope()
-    var showEdit by remember {
+    var showEdit by rememberSaveable {
         mutableStateOf(false)
     }
-    val inputChannel = Channel<Boolean>()
+    val inputChannel = remember {
+        Channel<Boolean>()
+    }
 
     var selectedStyle by rememberSaveable {
         mutableStateOf(BoolWidgetType.Switch)
     }
 
-    val interactionSource = remember { MutableInteractionSource() }
-
-    LaunchedEffect(null) {
-        capability.requestValue()
+    val interactionSource = remember {
+        MutableInteractionSource()
     }
 
-    val isChecked by merge(capability.responses.receiveAsFlow().map {
-        when (it) {
-            is Data.B -> {
-                SingleState.events.add("recived new state pog $it")
-                it.b
+    val isChecked by remember {
+        merge(capability.responses.receiveAsFlow().map {
+            when (it) {
+                is Data.B -> {
+                    SingleState.events.add("received new state pog $it")
+                    Log.d(TAG, "received new state pog $it")
+                    it.b
+                }
+
+                else -> TODO()
             }
-            else -> TODO()
-        }
-    }, inputChannel.receiveAsFlow(), interactionSource.interactions.mapNotNull {
-        return@mapNotNull when (it) {
-            is PressInteraction.Press -> true
-            is PressInteraction.Release -> false
-            is PressInteraction.Cancel -> false
-            else -> null
-        }
-    }).collectAsState(initial = false)
+        }, inputChannel.receiveAsFlow(), interactionSource.interactions.mapNotNull {
+            return@mapNotNull when (it) {
+                is PressInteraction.Press -> true
+                is PressInteraction.Release -> false
+                is PressInteraction.Cancel -> false
+                else -> null
+            }
+        })
+    }.collectAsState(initial = false)
 
     if (showEdit) {
         AlertDialog({
@@ -124,57 +122,59 @@ fun BoolWidget(capability: DeviceCapabilityState) {
         })
     }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.surface),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            androidx.compose.material3.Text(capability.name)
-            androidx.compose.material3.Text(capability.description)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surface),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        androidx.compose.material3.Text(capability.name)
+        androidx.compose.material3.Text(capability.description)
 
-            when (selectedStyle) {
-                BoolWidgetType.Switch -> {
-                    Switch(checked = isChecked, onCheckedChange = {
-                        scope.launch {
-                            inputChannel.send(it)
-                            capability.setValue(Data.B(it))
-                        }
-                    })
-                }
-
-                BoolWidgetType.Button -> {
-                    LaunchedEffect(key1 = interactionSource) {
-                        capability.setValue(Data.B(isChecked))
+        when (selectedStyle) {
+            BoolWidgetType.Switch -> {
+                Switch(checked = isChecked, onCheckedChange = {
+                    scope.launch {
+                        inputChannel.send(it)
                     }
-
-                    Button(interactionSource = interactionSource, onClick = {}) {
-                        Text("$isChecked")
-                    }
-                }
+                    capability.setValue(Data.B(it))
+                })
             }
 
-            Button(onClick = {
+            BoolWidgetType.Button -> {
+                LaunchedEffect(key1 = interactionSource) {
+                    capability.setValue(Data.B(isChecked))
+                }
+
+                Button(interactionSource = interactionSource, onClick = {}) {
+                    Text("$isChecked")
+                }
+            }
+        }
+
+        Button(
+            onClick = {
                 showEdit = true
             }, colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.onSecondary
-            )) {
-                Icon(Icons.Filled.Edit, contentDescription = "edit")
-            }
+            )
+        ) {
+            Icon(Icons.Filled.Edit, contentDescription = "edit")
         }
+    }
 }
 
-@OptIn(InternalCoroutinesApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
 fun StringWidget(capability: DeviceCapabilityState) {
     val inputFlow = Channel<String>()
 
     val scope = rememberCoroutineScope()
-    var showEdit by remember {
+    var showEdit by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -182,21 +182,20 @@ fun StringWidget(capability: DeviceCapabilityState) {
         mutableStateOf(StringWidgetType.Button)
     }
 
-    var unCommited by remember {
+
+    var unCommited by rememberSaveable {
         mutableStateOf("")
     }
 
-    val value by merge(capability.responses.receiveAsFlow().map {
-        when (it) {
-            is Data.S -> it.s
-            else -> TODO()
-        }
-    }, inputFlow.receiveAsFlow()).collectAsState(initial = "")
 
-    LaunchedEffect(null) {
-        Log.d(TAG, "LaunchEfect call")
-        capability.requestValue()
-    }
+    val value = remember {
+        merge(capability.responses.receiveAsFlow().map {
+            when (it) {
+                is Data.S -> it.s
+                else -> TODO()
+            }
+        }, inputFlow.receiveAsFlow())
+    }.collectAsState(initial = "")
 
     if (showEdit) {
         AlertDialog({
@@ -226,10 +225,11 @@ fun StringWidget(capability: DeviceCapabilityState) {
 
     when (selectedStyle) {
         StringWidgetType.Realtime -> {
-            OutlinedTextField(value = value, onValueChange = {
+            OutlinedTextField(value = unCommited, onValueChange = {
+                unCommited = it
+                capability.setValue(Data.S(it))
                 scope.launch {
                     inputFlow.send(it)
-                    capability.setValue(Data.S(it))
                 }
             }, textStyle = TextStyle(color = Color.White))
         }
@@ -260,12 +260,10 @@ fun StringWidget(capability: DeviceCapabilityState) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IntWidget(capability: DeviceCapabilityState) {
-    val scope = rememberCoroutineScope()
-
-    var value by remember {
+    var value by rememberSaveable {
         mutableStateOf(0)
     }
-    var unCommited by remember {
+    var unCommited by rememberSaveable {
         mutableStateOf("")
     }
 
@@ -288,10 +286,8 @@ fun IntWidget(capability: DeviceCapabilityState) {
         // colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
     )
     Button(onClick = {
-        scope.launch {
-            val num = unCommited.toIntOrNull() ?: return@launch
-            capability.setValue(Data.I(num))
-        }
+        val num = unCommited.toIntOrNull() ?: return@Button
+        capability.setValue(Data.I(num))
     }) {
         androidx.compose.material3.Text(text = "update")
     }

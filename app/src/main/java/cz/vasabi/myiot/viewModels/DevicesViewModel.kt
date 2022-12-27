@@ -3,9 +3,8 @@ package cz.vasabi.myiot.viewModels
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
-import cz.vasabi.myiot.backend.Device
-import cz.vasabi.myiot.backend.DeviceManager
-import cz.vasabi.myiot.backend.DeviceState
+import cz.vasabi.myiot.backend.connections.DeviceManager
+import cz.vasabi.myiot.backend.connections.DeviceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

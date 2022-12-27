@@ -1,4 +1,4 @@
-package cz.vasabi.myiot.pages
+package cz.vasabi.myiot.ui.pages
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -16,8 +16,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -38,7 +43,7 @@ sealed class NavigationItem(var route: String, var icon: ImageVector, var title:
 @Composable
 fun BottomNavigationBar(nav: NavController) {
     val items = NavigationItem.pages
-
+    val haptic = LocalHapticFeedback.current
     BottomNavigation(
         backgroundColor = MaterialTheme.colorScheme.primary
     ) {
@@ -47,13 +52,28 @@ fun BottomNavigationBar(nav: NavController) {
             BottomNavigationItem(
                 alwaysShowLabel = false,
                 icon = {
-                    Icon(item.icon, contentDescription = item.title, tint = if (!isSelected) MaterialTheme.colorScheme.inversePrimary else MaterialTheme.colorScheme.onPrimary)
+                    Box(contentAlignment = Alignment.Center) {
+                        /*
+                        if (isSelected) {
+                            Box(modifier = Modifier.fillMaxWidth(0.6f).fillMaxHeight(0.5f).clip(
+                                RoundedCornerShape(40)).background(Color.Magenta))
+                        }
+
+                         */
+                        Icon(
+                            item.icon,
+                            contentDescription = item.title,
+                            tint = if (!isSelected) MaterialTheme.colorScheme.inversePrimary else MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.clip(RectangleShape)
+                        )
+                    }
                 },
                 label = {
                     Text(text = item.title, color = if (!isSelected) MaterialTheme.colorScheme.inversePrimary else MaterialTheme.colorScheme.onPrimary)
                 },
                 selected = isSelected,
                 onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     nav.navigate(item.route) {
                         launchSingleTop = true
                         popUpTo(NavigationItem.selected.value.route) {

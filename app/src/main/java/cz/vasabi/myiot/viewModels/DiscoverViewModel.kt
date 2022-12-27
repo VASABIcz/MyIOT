@@ -5,30 +5,49 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import cz.vasabi.myiot.backend.DeviceInfo
-import cz.vasabi.myiot.backend.DeviceManager
+import com.fasterxml.jackson.databind.ObjectMapper
+import cz.vasabi.myiot.backend.connections.DeviceInfo
+import cz.vasabi.myiot.backend.connections.DeviceManager
+import cz.vasabi.myiot.backend.discovery.DeviceResolveManager
 import cz.vasabi.myiot.backend.discovery.DiscoveryManager
-import cz.vasabi.myiot.backend.discovery.HttpDeviceDiscoveryService
+import cz.vasabi.myiot.backend.discovery.implementations.HttpDeviceDiscoveryService
+import cz.vasabi.myiot.backend.discovery.implementations.TcpDeviceDiscoveryService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class DiscoverViewModel @Inject constructor(private val client: HttpClient, private val nsdManager: NsdManager, private val deviceManager: DeviceManager): ViewModel() {
+class DiscoverViewModel @Inject constructor(
+    private val client: HttpClient,
+    private val nsdManager: NsdManager,
+    private val deviceManager: DeviceManager,
+    private val objectMapper: ObjectMapper,
+    private val deviceResolveManager: DeviceResolveManager
+) : ViewModel() {
     val devices: SnapshotStateList<DeviceInfo> = SnapshotStateList()
     val isDiscovering = mutableStateOf(false) // TODO
 
     private val discoveryManager = DiscoveryManager {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             it.getDeviceInfo()?.let {
-                if (!deviceManager.isRegistered(it))
+                if (!deviceManager.isRegistered(it)) {
                     devices.add(it)
+                }
             }
         }
     }.apply {
-        addService(HttpDeviceDiscoveryService(nsdManager, {}, {}, client))
+        addService(HttpDeviceDiscoveryService(nsdManager, {}, {}, client, deviceResolveManager))
+        addService(
+            TcpDeviceDiscoveryService(
+                nsdManager,
+                {},
+                {},
+                objectMapper,
+                deviceResolveManager
+            )
+        )
     }
 
     init {
@@ -36,7 +55,7 @@ class DiscoverViewModel @Inject constructor(private val client: HttpClient, priv
     }
 
     fun addDevice(info: DeviceInfo) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             deviceManager.registerConnection(info)
             devices.remove(info)
         }

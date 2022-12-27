@@ -6,61 +6,99 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import java.util.Optional
 
 @Dao
 interface DeviceDao {
     @Insert
-    fun insertAll(vararg devices: DeviceEntity)
+    suspend fun insertAll(vararg devices: DeviceEntity)
 
     @Delete
-    fun deleteAll(vararg devices: DeviceEntity)
+    suspend fun deleteAll(vararg devices: DeviceEntity)
 
     @Update
-    fun updateAll(vararg devices: DeviceEntity)
+    suspend fun updateAll(vararg devices: DeviceEntity)
 
     @Query("SELECT * FROM DeviceEntity")
-    fun getAll(): List<DeviceEntity>
+    suspend fun getAll(): List<DeviceEntity>
 
     @Query("DELETE FROM DeviceEntity")
-    fun wipeTable()
+    suspend fun wipeTable()
 }
 
 @Dao
 interface HttpConnectionsDao {
     @Insert
-    fun insertAll(vararg connections: HttpDeviceConnectionEntity)
+    suspend fun insertAll(vararg connections: HttpDeviceConnectionEntity)
 
     @Delete
-    fun deleteAll(vararg connections: HttpDeviceConnectionEntity)
+    suspend fun deleteAll(vararg connections: HttpDeviceConnectionEntity)
 
     @Update
-    fun updateAll(vararg connections: HttpDeviceConnectionEntity)
+    suspend fun updateAll(vararg connections: HttpDeviceConnectionEntity)
 
     @Query("SELECT * FROM HttpDeviceConnectionEntity")
-    fun getAll(): List<HttpDeviceConnectionEntity>
+    suspend fun getAll(): List<HttpDeviceConnectionEntity>
 
     @Query("SELECT * FROM HttpDeviceConnectionEntity where identifier = :identifier")
-    fun findConnection(identifier: String): HttpDeviceConnectionEntity?
+    suspend fun findConnection(identifier: String): HttpDeviceConnectionEntity?
 
     @Query("DELETE FROM HttpDeviceConnectionEntity")
-    fun wipeTable()
+    suspend fun wipeTable()
 }
 
 @Dao
 interface HttpCapabilityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(vararg connections: HttpDeviceCapabilityEntity)
+    suspend fun insertAll(vararg connections: HttpDeviceCapabilityEntity)
 
     @Delete
-    fun deleteAll(vararg connections: HttpDeviceCapabilityEntity)
+    suspend fun deleteAll(vararg connections: HttpDeviceCapabilityEntity)
 
     @Update
-    fun updateAll(vararg connections: HttpDeviceCapabilityEntity)
+    suspend fun updateAll(vararg connections: HttpDeviceCapabilityEntity)
 
     @Query("SELECT * FROM HttpDeviceCapabilityEntity where identifier = :identifier")
-    fun findCapabilities(identifier: String): List<HttpDeviceCapabilityEntity>
+    suspend fun findCapabilities(identifier: String): List<HttpDeviceCapabilityEntity>
 
     @Query("DELETE FROM HttpDeviceCapabilityEntity")
-    fun wipeTable()
+    suspend fun wipeTable()
+}
+
+@Dao
+interface TcpConnectionsDao {
+    @Insert
+    suspend fun insertAll(vararg connections: TcpDeviceConnectionEntity)
+
+    @Delete
+    suspend fun deleteAll(vararg connections: TcpDeviceConnectionEntity)
+
+    @Update
+    suspend fun updateAll(vararg connections: TcpDeviceConnectionEntity)
+
+    @Query("SELECT * FROM TcpDeviceConnectionEntity")
+    suspend fun getAll(): List<TcpDeviceConnectionEntity>
+
+    @Query("SELECT * FROM TcpDeviceConnectionEntity where identifier = :identifier")
+    suspend fun findConnection(identifier: String): TcpDeviceConnectionEntity?
+
+    @Query("DELETE FROM TcpDeviceConnectionEntity")
+    suspend fun wipeTable()
+}
+
+@Dao
+interface TcpCapabilityDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(vararg connections: TcpDeviceCapabilityEntity)
+
+    @Delete
+    suspend fun deleteAll(vararg connections: TcpDeviceCapabilityEntity)
+
+    @Update
+    suspend fun updateAll(vararg connections: TcpDeviceCapabilityEntity)
+
+    @Query("SELECT * FROM TcpDeviceCapabilityEntity where identifier = :identifier")
+    suspend fun findCapabilities(identifier: String): List<TcpDeviceCapabilityEntity>
+
+    @Query("DELETE FROM TcpDeviceCapabilityEntity")
+    suspend fun wipeTable()
 }

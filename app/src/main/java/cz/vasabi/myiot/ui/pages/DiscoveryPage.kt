@@ -1,4 +1,4 @@
-package cz.vasabi.myiot.pages
+package cz.vasabi.myiot.ui.pages
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
@@ -25,15 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cz.vasabi.myiot.backend.DeviceInfo
+import cz.vasabi.myiot.backend.connections.DeviceInfo
 import cz.vasabi.myiot.viewModels.DiscoverViewModel
 
 @OptIn(ExperimentalMaterialApi::class)

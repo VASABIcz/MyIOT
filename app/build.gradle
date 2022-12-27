@@ -78,6 +78,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.squareup.retrofit2/converter-jackson
     implementation 'com.squareup.retrofit2:converter-jackson:2.9.0'
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.14.1"
 
     // implementation "androidx.room:room-runtime:$room_version"
 

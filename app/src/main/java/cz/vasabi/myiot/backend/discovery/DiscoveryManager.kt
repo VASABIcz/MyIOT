@@ -1,6 +1,6 @@
 package cz.vasabi.myiot.backend.discovery
 
-import cz.vasabi.myiot.backend.DeviceConnection
+import cz.vasabi.myiot.backend.connections.DeviceConnection
 
 class DiscoveryManager(private val onDeviceResolved: (DeviceConnection) -> Unit) {
      private val discoveryServices: MutableList<DiscoveryService> = mutableListOf()

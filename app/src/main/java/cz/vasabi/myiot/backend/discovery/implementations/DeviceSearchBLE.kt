@@ -1,16 +1,18 @@
-package cz.vasabi.myiot.backend.discovery
+package cz.vasabi.myiot.backend.discovery.implementations
 
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.le.BluetoothLeAdvertiser
-import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.os.Handler
-import cz.vasabi.myiot.backend.DeviceConnection
+import cz.vasabi.myiot.backend.connections.DeviceConnection
+import cz.vasabi.myiot.backend.discovery.DiscoveryService
 
-class BLEDiscoveryService(
+
+// TODO
+
+class DeviceSearchBLE(
     override var onDeviceResolved: (DeviceConnection) -> Unit,
-    val bluetoothAdapter: BluetoothAdapter
+    private val bluetoothAdapter: BluetoothAdapter
 ) : DiscoveryService {
     override var isDone: Boolean = false
 
@@ -30,19 +32,6 @@ class BLEDiscoveryService(
     // Stops scanning after 10 seconds.
     private val SCAN_PERIOD: Long = 10000
 
-    private fun scanLeDevice() {
-        if (!scanning) { // Stops scanning after a pre-defined scan period.
-            handler.postDelayed({
-                scanning = false
-                bluetoothAdapter.bluetoothLeScanner.stopScan(leScanCallback)
-            }, SCAN_PERIOD)
-            scanning = true
-            bluetoothAdapter.bluetoothLeScanner.startScan(leScanCallback)
-        } else {
-            scanning = false
-            bluetoothAdapter.bluetoothLeScanner.stopScan(leScanCallback)
-        }
-    }
 
     // Device scan callback.
     private val leScanCallback: ScanCallback = object : ScanCallback() {
@@ -50,6 +39,4 @@ class BLEDiscoveryService(
             super.onScanResult(callbackType, result)
         }
     }
-
-
 }

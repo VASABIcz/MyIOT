@@ -3,9 +3,9 @@ package cz.vasabi.myiot.backend.database
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import cz.vasabi.myiot.backend.BaseDeviceCapability
-import cz.vasabi.myiot.backend.Device
-import cz.vasabi.myiot.backend.HttpConnectionInfo
+import cz.vasabi.myiot.backend.connections.BaseDeviceCapability
+import cz.vasabi.myiot.backend.connections.Device
+import cz.vasabi.myiot.backend.connections.IpConnectionInfo
 
 @Entity
 data class DeviceEntity(
@@ -21,7 +21,7 @@ data class HttpDeviceConnectionEntity(
     @ColumnInfo override val port: Int,
     @ColumnInfo override val description: String?,
     @ColumnInfo override val name: String
-): HttpConnectionInfo
+) : IpConnectionInfo
 
 @Entity(primaryKeys = ["identifier", "name"])
 data class HttpDeviceCapabilityEntity(
@@ -30,7 +30,25 @@ data class HttpDeviceCapabilityEntity(
     @ColumnInfo override val route: String,
     @ColumnInfo override val description: String,
     @ColumnInfo override val type: String
-): BaseDeviceCapability
+) : BaseDeviceCapability
+
+@Entity
+data class TcpDeviceConnectionEntity(
+    @PrimaryKey override val identifier: String,
+    @ColumnInfo override val host: String,
+    @ColumnInfo override val port: Int,
+    @ColumnInfo override val description: String?,
+    @ColumnInfo override val name: String
+) : IpConnectionInfo
+
+@Entity(primaryKeys = ["identifier", "name"])
+data class TcpDeviceCapabilityEntity(
+    @ColumnInfo val identifier: String,
+    @ColumnInfo override val name: String,
+    @ColumnInfo override val route: String,
+    @ColumnInfo override val description: String,
+    @ColumnInfo override val type: String
+) : BaseDeviceCapability
 
 /*
 

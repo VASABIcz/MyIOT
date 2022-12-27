@@ -1,6 +1,6 @@
 package cz.vasabi.myiot.backend.discovery
 
-import cz.vasabi.myiot.backend.DeviceConnection
+import cz.vasabi.myiot.backend.connections.DeviceConnection
 
 interface DiscoveryService {
     var onDeviceResolved: (DeviceConnection) -> Unit

@@ -5,8 +5,11 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.net.nsd.NsdManager
 import androidx.room.Room
-import cz.vasabi.myiot.backend.DeviceManager
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import cz.vasabi.myiot.backend.connections.DeviceManager
 import cz.vasabi.myiot.backend.database.AppDatabase
+import cz.vasabi.myiot.backend.discovery.DeviceResolveManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,8 +36,12 @@ object Injection {
 
     @Provides
     @Singleton
-    fun provideDeviceManager(db: AppDatabase, client: HttpClient): DeviceManager {
-        return DeviceManager(db, client)
+    fun provideDeviceManager(
+        db: AppDatabase,
+        client: HttpClient,
+        objectMapper: ObjectMapper
+    ): DeviceManager {
+        return DeviceManager(db, client, objectMapper)
     }
 
     @Provides
@@ -56,6 +63,18 @@ object Injection {
         return Room.databaseBuilder(
             ctx,
             AppDatabase::class.java, "app-database"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideObjectMapper(): ObjectMapper {
+        return ObjectMapper().registerModule(KotlinModule.Builder().build())
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeviceResolveManager(nsdManager: NsdManager): DeviceResolveManager {
+        return DeviceResolveManager(nsdManager)
     }
 }
