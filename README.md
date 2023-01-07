@@ -10,13 +10,15 @@
 
 ### Screenshots
 
-[![](https://cdn.discordapp.com/attachments/856286428715155486/1058163004178432101/Screenshot_2022-12-30-00-21-05-86_23071cf58cd4c40ee351973e03c84198.jpg)]
-[![](https://cdn.discordapp.com/attachments/856286428715155486/1058163004178432101/Screenshot_2022-12-30-00-21-05-86_23071cf58cd4c40ee351973e03c84198.jpg)]
+### curent state
+
+![](https://cdn.discordapp.com/attachments/856286428715155486/1058163004178432101/Screenshot_2022-12-30-00-21-05-86_23071cf58cd4c40ee351973e03c84198.jpg)
+![](https://cdn.discordapp.com/attachments/856286428715155486/1058068754161991750/Screenshot_2022-12-29-18-07-06-81_23071cf58cd4c40ee351973e03c84198.jpg)
 
 ### first prototype
 
-[![](https://cdn.discordapp.com/attachments/856286428715155486/1061098708546113556/received_3681967445363960.jpg)]
-[![](https://cdn.discordapp.com/attachments/856286428715155486/1061098777215238184/received_3217991741797345.jpg)]
+![](https://cdn.discordapp.com/attachments/856286428715155486/1061098708546113556/received_3681967445363960.jpg)
+![](https://cdn.discordapp.com/attachments/856286428715155486/1061098777215238184/received_3217991741797345.jpg)
 
 ## Sources
 
