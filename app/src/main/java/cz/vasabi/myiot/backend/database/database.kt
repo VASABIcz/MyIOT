@@ -9,7 +9,8 @@ import androidx.room.RoomDatabase
         HttpDeviceCapabilityEntity::class,
         HttpDeviceConnectionEntity::class,
         TcpDeviceCapabilityEntity::class,
-        TcpDeviceConnectionEntity::class], version = 2
+        TcpDeviceConnectionEntity::class,
+        CapabilityReadingEntity::class], version = 4
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun deviceDao(): DeviceDao

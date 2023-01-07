@@ -15,6 +15,7 @@ import cz.vasabi.myiot.backend.discovery.implementations.TcpDeviceDiscoveryServi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,13 +28,21 @@ class DiscoverViewModel @Inject constructor(
     private val deviceResolveManager: DeviceResolveManager
 ) : ViewModel() {
     val devices: SnapshotStateList<DeviceInfo> = SnapshotStateList()
-    val isDiscovering = mutableStateOf(false) // TODO
+    val showLoading = mutableStateOf(true)
+
+    var timeoutCoroutine = viewModelScope.launch {
+        delay(10_000)
+        showLoading.value = false
+    }
 
     private val discoveryManager = DiscoveryManager {
         viewModelScope.launch(Dispatchers.IO) {
             it.getDeviceInfo()?.let {
                 if (!deviceManager.isRegistered(it)) {
-                    devices.add(it)
+                    try {
+                        devices.add(it)
+                    } catch (_: Throwable) {
+                    }
                 }
             }
         }
@@ -58,6 +67,11 @@ class DiscoverViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             deviceManager.registerConnection(info)
             devices.remove(info)
+        }
+        timeoutCoroutine.cancel()
+        timeoutCoroutine = viewModelScope.launch {
+            delay(10_000)
+            showLoading.value = false
         }
     }
 

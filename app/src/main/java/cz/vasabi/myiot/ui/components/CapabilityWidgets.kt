@@ -4,24 +4,30 @@ import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,6 +41,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import cz.vasabi.myiot.SingleState
@@ -57,11 +66,16 @@ enum class StringWidgetType {
     Button
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
 fun BoolWidget(capability: DeviceCapabilityState) {
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     var showEdit by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isHovered by rememberSaveable {
         mutableStateOf(false)
     }
     val inputChannel = remember {
@@ -89,15 +103,50 @@ fun BoolWidget(capability: DeviceCapabilityState) {
             }
         }, inputChannel.receiveAsFlow(), interactionSource.interactions.mapNotNull {
             return@mapNotNull when (it) {
-                is PressInteraction.Press -> true
-                is PressInteraction.Release -> false
-                is PressInteraction.Cancel -> false
+                is PressInteraction.Press -> {
+                    scope.launch {
+                        capability.setValue(Data.B(true))
+                    }
+                    true
+                }
+
+                is PressInteraction.Release -> {
+                    scope.launch {
+                        capability.setValue(Data.B(false))
+                    }
+                    false
+                }
+
+                is PressInteraction.Cancel -> {
+                    scope.launch {
+                        capability.setValue(Data.B(false))
+                    }
+                    false
+                }
+
                 else -> null
             }
         })
     }.collectAsState(initial = false)
 
     if (showEdit) {
+        BottomSheetScaffold(sheetContent = {
+            Column {
+                Button(onClick = {
+                    selectedStyle = BoolWidgetType.Switch
+                }) {
+                    Text("switch")
+                }
+                Button(onClick = {
+                    selectedStyle = BoolWidgetType.Button
+                }) {
+                    Text("button")
+                }
+            }
+        }) {
+
+        }
+        return
         AlertDialog({
             showEdit = false
         }, {
@@ -122,17 +171,41 @@ fun BoolWidget(capability: DeviceCapabilityState) {
         })
     }
 
+    var c by remember {
+        mutableStateOf(Color.White)
+    }
+
+    c = if (isHovered) {
+        MaterialTheme.colorScheme.surfaceTint
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(c)
             .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surface),
+            //.background(MaterialTheme.colorScheme.surface)
+            .padding(6.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        showEdit = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onPress = {
+                        isHovered = true
+                        awaitRelease()
+                        isHovered = false
+                    },
+                )
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        androidx.compose.material3.Text(capability.name)
-        androidx.compose.material3.Text(capability.description)
-
+        Text(capability.name, style = MaterialTheme.typography.headlineSmall)
+        Text(capability.description)
         when (selectedStyle) {
             BoolWidgetType.Switch -> {
                 Switch(checked = isChecked, onCheckedChange = {
@@ -146,23 +219,15 @@ fun BoolWidget(capability: DeviceCapabilityState) {
             BoolWidgetType.Button -> {
                 LaunchedEffect(key1 = interactionSource) {
                     capability.setValue(Data.B(isChecked))
+                    scope.launch {
+                        inputChannel.send(isChecked)
+                    }
                 }
 
                 Button(interactionSource = interactionSource, onClick = {}) {
                     Text("$isChecked")
                 }
             }
-        }
-
-        Button(
-            onClick = {
-                showEdit = true
-            }, colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary
-            )
-        ) {
-            Icon(Icons.Filled.Edit, contentDescription = "edit")
         }
     }
 }
@@ -219,8 +284,8 @@ fun StringWidget(capability: DeviceCapabilityState) {
         })
     }
 
-    androidx.compose.material3.Text(capability.name)
-    androidx.compose.material3.Text(capability.description)
+    Text(capability.name)
+    Text(capability.description)
 
 
     when (selectedStyle) {
@@ -244,7 +309,7 @@ fun StringWidget(capability: DeviceCapabilityState) {
                     capability.setValue(Data.S(unCommited))
                 }
             }) {
-                androidx.compose.material3.Text(text = "update")
+                Text(text = "update")
             }
             Text(text = "value $value", color = MaterialTheme.colorScheme.onBackground)
         }
@@ -257,7 +322,6 @@ fun StringWidget(capability: DeviceCapabilityState) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IntWidget(capability: DeviceCapabilityState) {
     var value by rememberSaveable {
@@ -276,20 +340,57 @@ fun IntWidget(capability: DeviceCapabilityState) {
         }
     }
 
-    Text(capability.name)
-    Text(capability.description)
+    Column(modifier = Modifier.padding(6.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                capability.name,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(capability.description, color = MaterialTheme.colorScheme.onBackground)
+            Text(text = "value $value")
+        }
+        Spacer(modifier = Modifier.height(6.dp))
 
-    OutlinedTextField(
-        value = unCommited,
-        onValueChange = { unCommited = it },
-        textStyle = TextStyle(color = Color.White)
-        // colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
-    )
-    Button(onClick = {
-        val num = unCommited.toIntOrNull() ?: return@Button
-        capability.setValue(Data.I(num))
-    }) {
-        androidx.compose.material3.Text(text = "update")
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            /*
+            OutlinedTextField(
+                value = unCommited,
+                onValueChange = { unCommited = it },
+                textStyle = TextStyle(color = Color.White)
+                // colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
+            )
+            Button(onClick = {
+                val num = unCommited.toIntOrNull() ?: return@Button
+                capability.setValue(Data.I(num))
+            }) {
+                androidx.compose.material3.Text(text = "update")
+            }
+
+             */
+            formTextField(modifier = Modifier.fillMaxWidth(), unCommited, {
+                unCommited = it
+            }) {
+                val num = unCommited.toIntOrNull() ?: return@formTextField
+                capability.setValue(Data.I(num))
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+
+        if (capability.readings.size > 2) {
+            Chart(
+                readings = capability.readings, timeMilis = 60_000, modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .border(2.dp, MaterialTheme.colorScheme.primary),
+                color = MaterialTheme.colorScheme.tertiary,
+                textColor = MaterialTheme.colorScheme.secondary
+            )
+        }
     }
-    androidx.compose.material3.Text(text = "value $value")
 }

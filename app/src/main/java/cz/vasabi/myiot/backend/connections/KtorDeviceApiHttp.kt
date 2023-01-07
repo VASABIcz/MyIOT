@@ -72,6 +72,7 @@ class HttpDeviceConnection(val info: IpConnectionInfo, private val client: HttpC
     override val connectionType: ConnectionType = ConnectionType.Http
     private val scope = CoroutineScope(Dispatchers.IO)
     override var onConnectionChanged: suspend (ConnectionState) -> Unit = {}
+    override val identifier: String = info.identifier
     private var isConnected = false
 
     override fun connect() {

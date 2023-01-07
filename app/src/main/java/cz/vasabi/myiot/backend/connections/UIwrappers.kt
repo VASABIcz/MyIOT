@@ -9,27 +9,68 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import cz.vasabi.myiot.backend.api.Data
+import cz.vasabi.myiot.backend.database.CapabilityReadingDao
+import cz.vasabi.myiot.ui.components.Reading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import java.time.Instant
+import javax.inject.Inject
 
-class DeviceState(private val device: Device) : Device by device {
+open class DeviceState(private val device: Device) : Device by device {
     val connections: SnapshotStateMap<ConnectionType, DeviceConnectionState> = mutableStateMapOf()
+
+    val connectionState: ConnectionState
+        get() {
+            return if (connections.any { it.value.connected.value == ConnectionState.Connected }) {
+                ConnectionState.Connected
+            } else if (connections.any { it.value.connected.value == ConnectionState.Loading }) {
+                ConnectionState.Loading
+            } else {
+                ConnectionState.Disconnected
+            }
+        }
 }
 
 class DeviceCapabilityState(
     private val deviceCapability: DeviceCapability,
-    parent: DeviceConnection
+    private val parent: DeviceConnection
 ) : DeviceCapability by deviceCapability {
+    private val scope = CoroutineScope(Dispatchers.IO)
     val responses: Channel<Data> = Channel()
+
+    @Inject
+    lateinit var readingDao: CapabilityReadingDao
+    val readings = mutableStateListOf<Reading>()
 
     init {
         deviceCapability.onReceived = { value ->
             Log.d(ContentValues.TAG, "adding new value to channel $value $deviceCapability")
+            scope.launch {
+                if (deviceCapability.type == "int") {
+                    readings.add(Reading(Instant.now(), value.value.toDouble().toFloat()))
+                }
+                /*
+                readingDao.insertAll(
+                    CapabilityReadingEntity(
+                        parent.identifier,
+                        deviceCapability.name,
+                        parent.connectionType.toString(),
+                        deviceCapability.type,
+                        value.value
+                    )
+                )
+                */
+            }
             responses.send(value)
         }
+    }
+
+    override fun close() {
+        scope.cancel()
+        deviceCapability.close()
     }
 }
 
@@ -40,6 +81,11 @@ class DeviceConnectionState(
     val deviceCapabilities: SnapshotStateList<DeviceCapabilityState> = mutableStateListOf()
     val connected: MutableState<ConnectionState> = mutableStateOf(ConnectionState.Loading)
     private val scope = CoroutineScope(Dispatchers.IO)
+    val drawCapabilities = mutableStateOf(true)
+
+    fun invertShow() {
+        drawCapabilities.value = !drawCapabilities.value
+    }
 
     init {
         deviceConnection.onConnectionChanged = {
@@ -64,7 +110,8 @@ class DeviceConnectionState(
             deviceCapabilities.addAll(capabilities.map {
                 DeviceCapabilityState(
                     it,
-                    deviceConnection
+                    this@DeviceConnectionState
+
                 )
             })
             deviceManager.registerCapabilities(capabilities, deviceConnection)

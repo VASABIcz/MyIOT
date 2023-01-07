@@ -53,6 +53,18 @@ interface BaseDeviceCapability {
     }
 }
 
+interface BaseCapabilityReading {
+    val id: Int
+
+    val identifier: String
+    val capabilityName: String
+    val connectionType: String
+
+    val timestamp: Long
+    val type: String
+    val value: String
+}
+
 interface IpConnectionInfo {
     val host: String
     val port: Int

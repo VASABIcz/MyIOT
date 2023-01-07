@@ -1,4 +1,4 @@
-package cz.vasabi.myiot
+package cz.vasabi.myiot.todo
 
 
 interface CustomDataType {
@@ -13,9 +13,13 @@ class RgbDataType(
     override var name: String = "RGB",
     override var description: String = "representation of color in R G B",
     override var fields: HashMap<String, DataType> = hashMapOf(
-        "r" to DataType.Base(BaseDataType.Float()), "g" to DataType.Base(BaseDataType.Float()), "b" to DataType.Base(BaseDataType.Float()))
-) : CustomDataType {
-}
+        "r" to DataType.Base(BaseDataType.Float()),
+        "g" to DataType.Base(BaseDataType.Float()),
+        "b" to DataType.Base(
+            BaseDataType.Float()
+        )
+    )
+) : CustomDataType
 
 /*
 definition
@@ -101,11 +105,10 @@ sealed class BaseContainerValue: BaseContainer {
 
 sealed interface BaseContainer {
     open class Array(val type: BaseDataType)
-    open class Enum()
+    open class Enum
 }
 
-sealed class DataTyp {
-}
+sealed class DataTyp
 
 /*
 interface ReadableCompatibility: DeviceCapability {

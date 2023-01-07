@@ -2,16 +2,16 @@ package cz.vasabi.myiot.ui.pages
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DevicesOther
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,10 +29,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 sealed class NavigationItem(var route: String, var icon: ImageVector, var title: String) {
-    object Settings: NavigationItem("settings", Icons.Filled.Settings, "Settings")
-    object Discover: NavigationItem("discover", Icons.Filled.Add, "Discover")
-    object Devices: NavigationItem("devices", Icons.Filled.Phone, "Devices")
-    object Debug: NavigationItem("debug", Icons.Filled.Info, "Logs")
+
+    object Settings : NavigationItem("settings", Icons.Default.Settings, "Settings")
+    object Discover : NavigationItem("discover", Icons.Default.Hub, "Discover")
+    object Devices : NavigationItem("devices", Icons.Default.DevicesOther, "Devices")
+    object Debug : NavigationItem("debug", Icons.Default.Info, "Logs")
 
     companion object {
         val pages = listOf(Devices, Discover, Debug, Settings)
@@ -44,12 +45,12 @@ sealed class NavigationItem(var route: String, var icon: ImageVector, var title:
 fun BottomNavigationBar(nav: NavController) {
     val items = NavigationItem.pages
     val haptic = LocalHapticFeedback.current
-    BottomNavigation(
-        backgroundColor = MaterialTheme.colorScheme.primary
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.primary
     ) {
         items.forEach { item ->
             val isSelected = item == NavigationItem.selected.value
-            BottomNavigationItem(
+            NavigationBarItem(
                 alwaysShowLabel = false,
                 icon = {
                     Box(contentAlignment = Alignment.Center) {
@@ -81,9 +82,15 @@ fun BottomNavigationBar(nav: NavController) {
                         }
                     }
                     NavigationItem.selected.value = item
-                },
-                selectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                unselectedContentColor = MaterialTheme.colorScheme.inversePrimary
+                }
+                /*        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                            unselectedIconColor = MaterialTheme.colorScheme.inversePrimary,
+                            unselectedTextColor = MaterialTheme.colorScheme.inversePrimary
+                        )*/
+                // selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                // unselectedContentColor = MaterialTheme.colorScheme.inversePrimary
             )
         }
     }

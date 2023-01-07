@@ -18,6 +18,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cz.vasabi.myiot.backend.connections.DeviceInfo
 import cz.vasabi.myiot.viewModels.DiscoverViewModel
+
 
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("UnrememberedMutableState")
@@ -54,11 +56,30 @@ fun DiscoverPage(viewModel: DiscoverViewModel = hiltViewModel()) {
         .pullRefresh(refreshState)
     ) {
         PullRefreshIndicator(refreshing = isRefreshing, state = refreshState)
-        LazyColumn {
-            itemsIndexed(viewModel.devices) { i, it ->
-                DiscoveredDevice(it) {
-                    viewModel.addDevice(it)
+        if (viewModel.devices.size > 0) {
+            LazyColumn {
+                itemsIndexed(viewModel.devices) { i, it ->
+                    DiscoveredDevice(it) {
+                        viewModel.addDevice(it)
+                    }
                 }
+            }
+            return
+        }
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (viewModel.showLoading.value) {
+                CircularProgressIndicator()
+            }
+
+        }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (viewModel.showLoading.value) {
+                CircularProgressIndicator()
+            } else {
+                Text(text = "unable to find any devices")
             }
         }
     }

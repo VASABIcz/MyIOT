@@ -118,6 +118,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
             connManager.onConnectionChanged = value
             field = value
         }
+    override val identifier = info.identifier
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val selectorManager = SelectorManager(Dispatchers.IO)

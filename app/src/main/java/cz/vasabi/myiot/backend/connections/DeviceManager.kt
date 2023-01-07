@@ -1,5 +1,7 @@
 package cz.vasabi.myiot.backend.connections
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -10,6 +12,7 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DeviceManager(
     database: AppDatabase,
@@ -27,7 +30,13 @@ class DeviceManager(
 
 
     private suspend fun loadHttpConn(device: DeviceState) {
-        val conn = httpConnectionDao.findConnection(device.identifier) ?: return
+        val conn = httpConnectionDao.findConnection(device.identifier)
+
+        if (conn == null) {
+            Log.w(TAG, "mo http conn found")
+            return
+        }
+
         println("loading connection $conn from database")
         val httpConn = DeviceConnectionState(
             HttpDeviceConnection(conn, client),
@@ -81,42 +90,51 @@ class DeviceManager(
                 val device = DeviceState(it)
                 loadTcpConn(device)
                 loadHttpConn(device)
-                devices[device.identifier] = device
+                // FIXME interesting https://stackoverflow.com/questions/66891349/java-lang-illegalstateexception-when-using-state-in-android-jetpack-compose
+                withContext(Dispatchers.Main) {
+                    devices[device.identifier] = device
+                }
             }
         }
     }
 
     fun registerConnection(info: DeviceInfo) = scope.launch {
+        // FIXME looks sus
         if (isRegistered(info)) return@launch
 
         if (!devices.containsKey(info.identifier)) {
             val device = DeviceState(info)
-
             deviceDao.insertAll(info.toEntity())
+            devices[info.identifier] = device
+        }
 
-            when (info.parent) {
-                is DeviceConnectionState -> throw IllegalStateException()
-                is HttpDeviceConnection -> {
-                    httpConnectionDao.insertAll((info.parent as HttpDeviceConnection).toEntity())
-                }
+        val device = devices[info.identifier] ?: return@launch
 
-                is TcpDeviceConnection -> {
-                    tcpConnectionDao.insertAll((info.parent as TcpDeviceConnection).toEntity())
-                }
-
-                else -> throw IllegalStateException()
+        when (info.parent) {
+            is DeviceConnectionState -> throw IllegalStateException()
+            is HttpDeviceConnection -> {
+                Log.e(TAG, "adding http conn to DB")
+                httpConnectionDao.insertAll((info.parent as HttpDeviceConnection).toEntity())
             }
 
-            device.connections[info.connectionType] = DeviceConnectionState(info.parent, this@DeviceManager).apply {
+            is TcpDeviceConnection -> {
+                tcpConnectionDao.insertAll((info.parent as TcpDeviceConnection).toEntity())
+            }
+        }
+
+        device.connections[info.connectionType] =
+            DeviceConnectionState(info.parent, this@DeviceManager).apply {
                 scope.launch {
                     connect()
                 }
             }
 
-            devices[info.identifier] = device
-            return@launch
-        }
-        devices[info.identifier]?.connections?.set(info.parent.connectionType, DeviceConnectionState(info.parent, this@DeviceManager))
+        // return@launch
+
+        devices[info.identifier]?.connections?.set(
+            info.parent.connectionType,
+            DeviceConnectionState(info.parent, this@DeviceManager)
+        )
         scope.launch {
             info.parent.connect()
         }
@@ -144,8 +162,6 @@ class DeviceManager(
                     tcpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as TcpDeviceCapabilityEntity)
                     // Log.e(TAG, "TODO implement ME registerCapabilities")
                 }
-
-                else -> throw IllegalStateException()
             }
         }
     }

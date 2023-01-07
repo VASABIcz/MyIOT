@@ -102,3 +102,38 @@ interface TcpCapabilityDao {
     @Query("DELETE FROM TcpDeviceCapabilityEntity")
     suspend fun wipeTable()
 }
+
+@Dao
+interface CapabilityReadingDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(vararg connections: CapabilityReadingEntity)
+
+    @Delete
+    suspend fun deleteAll(vararg connections: CapabilityReadingEntity)
+
+    @Update
+    suspend fun updateAll(vararg connections: CapabilityReadingEntity)
+
+    @Query("SELECT * FROM CapabilityReadingEntity where identifier = :identifier and connectionType = :connectionType and capabilityName = :name")
+    suspend fun getAll(
+        identifier: String,
+        connectionType: String,
+        name: String
+    ): List<CapabilityReadingEntity>
+
+    @Query("SELECT * FROM CapabilityReadingEntity where identifier = :identifier and connectionType = :connectionType and capabilityName = :name limit :limit")
+    suspend fun getAllLimit(
+        identifier: String,
+        connectionType: String,
+        name: String,
+        limit: Int
+    ): List<CapabilityReadingEntity>
+
+    @Query("SELECT * FROM CapabilityReadingEntity where identifier = :identifier and connectionType = :connectionType and capabilityName = :name and timestamp >= :timestamp")
+    suspend fun getNewerThan(
+        identifier: String,
+        connectionType: String,
+        name: String,
+        timestamp: Long
+    )
+}
