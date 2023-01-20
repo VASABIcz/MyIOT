@@ -1,8 +1,6 @@
 package cz.vasabi.myiot.backend.api
 
 import com.fasterxml.jackson.annotation.JsonFormat
-
-
 sealed interface Data {
     class B(val b: Boolean): Data
     class F(val f: Float): Data

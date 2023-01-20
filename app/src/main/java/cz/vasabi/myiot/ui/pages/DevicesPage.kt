@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +14,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.BottomDrawer
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,10 +33,16 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -45,8 +54,8 @@ import cz.vasabi.myiot.backend.connections.Device
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
 import cz.vasabi.myiot.backend.connections.DeviceConnectionState
 import cz.vasabi.myiot.backend.connections.DeviceState
-import cz.vasabi.myiot.ui.components.BoolWidget
 import cz.vasabi.myiot.ui.components.DrawConnectionState
+import cz.vasabi.myiot.ui.components.BoolWidget
 import cz.vasabi.myiot.ui.components.IntWidget
 import cz.vasabi.myiot.ui.components.SelectableButton
 import cz.vasabi.myiot.ui.components.StringWidget
@@ -67,7 +76,7 @@ fun DevicesPage(viewModel: DevicesViewModel = hiltViewModel()) {
                         DrawDevice(it, {
                             viewModel.selectedDevice.value = it
                             scope.launch {
-                                viewModel.drawerState.close()
+                                viewModel.sideDrawerState.close()
                             }
                         })
                     }
@@ -75,7 +84,7 @@ fun DevicesPage(viewModel: DevicesViewModel = hiltViewModel()) {
             }
         },
         // FIXME drawerBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-        drawerState = viewModel.drawerState
+        drawerState = viewModel.sideDrawerState
     ) {
         DevicesPageMain()
     }
@@ -110,7 +119,7 @@ fun DrawDevice(device: DeviceState, onCLick: () -> Unit, viewModel: DevicesViewM
 
 class MockDevice : Device {
     override val name: String = "device name"
-    override val description: String? = "very interesting device description"
+    override val description: String = "very interesting device description"
     override val identifier: String = "unqiue-identifier"
 
 }
@@ -150,12 +159,77 @@ fun PreviewDrawDevice() {
     }
 }
 
+
 @Composable
-fun drawCapability(capability: DeviceCapabilityState) {
+fun drawCapability(capability: DeviceCapabilityState, viewModel: DevicesViewModel = hiltViewModel()) {
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+
     // FIXME it runs on activity restart
     LaunchedEffect(null) {
         capability.requestValue()
     }
+
+    var isHovered by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var bottomDrawerContent: @Composable ColumnScope.() -> Unit by remember {
+        mutableStateOf({ Text(text = "")})
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isHovered) MaterialTheme.colorScheme.surfaceTint else MaterialTheme.colorScheme.surfaceVariant)
+            .clip(RoundedCornerShape(6.dp))
+            //.background(MaterialTheme.colorScheme.surface)
+            .padding(6.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        isHovered = false
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scope.launch {
+                            viewModel.openBottomSheet(bottomDrawerContent)
+                        }
+                    },
+                    onPress = {
+                        isHovered = true
+                        try {
+                            awaitRelease()
+                        } catch (_: Throwable) {
+                        }
+                        isHovered = false
+                    },
+                )
+            },
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(capability.name, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+        Text(capability.description, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.width(1000.dp))
+        when (capability.type) {
+            "bool" -> {
+                BoolWidget(capability) {
+                    bottomDrawerContent = it
+                }
+            }
+            "string" -> {
+                StringWidget(capability) {
+                    bottomDrawerContent = it
+                }
+            }
+            "int" -> {
+                IntWidget(capability) {
+                     bottomDrawerContent = it
+                }
+            }
+            else -> {}
+        }
+    }
+    /*
     Column {
         when (capability.type) {
             "bool" -> {
@@ -171,6 +245,8 @@ fun drawCapability(capability: DeviceCapabilityState) {
             }
         }
     }
+
+     */
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -189,11 +265,40 @@ fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
         Text(text = "No devices added try adding some")
     }
     viewModel.selectedDevice.value?.let { device ->
+        /*
         ModalBottomSheetLayout(
-            sheetContent = {
-                Text(text = "UwU")
-            },
+            sheetContent = viewModel.bottomDrawerContent.value,
             sheetState = viewModel.bottomSheetState,
+            sheetShape = RoundedCornerShape(4.dp),
+            sheetBackgroundColor = MaterialTheme.colorScheme.background
+        ) {
+            LazyColumn {
+                items(device.connections.values.toList()) {
+                    DrawConnection(it, {})
+                }
+            }
+        }
+
+         */
+        BottomDrawer(
+            drawerContent = {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                        Icon(
+                            Icons.Default.Remove,
+                            contentDescription = "drag handle",
+                            modifier = Modifier.size(32.dp, 40.dp),
+                            tint = Color(255,255,255, 102)
+                        )
+                    }
+                    val x = viewModel.bottomDrawerContent.value
+                    x()
+                }
+            },
+            drawerState = viewModel.bDrawerState,
+            drawerShape = RoundedCornerShape(16.dp, 16.dp),
+            drawerBackgroundColor = MaterialTheme.colorScheme.background,
+            gesturesEnabled = viewModel.bottomDrawerEnabled.value
         ) {
             LazyColumn {
                 items(device.connections.values.toList()) {

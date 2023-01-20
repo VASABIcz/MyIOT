@@ -15,5 +15,10 @@ fun SettingsPage(viewModel: SettingsViewModel = hiltViewModel()) {
         }) {
             Text(text = "wipe Database")
         }
+        Button(onClick = {
+            viewModel.makeMockDevice()
+        }) {
+            Text(text = "register mock device")
+        }
     }
 }

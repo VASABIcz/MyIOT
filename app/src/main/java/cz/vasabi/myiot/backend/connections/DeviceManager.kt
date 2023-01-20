@@ -104,7 +104,9 @@ class DeviceManager(
 
         if (!devices.containsKey(info.identifier)) {
             val device = DeviceState(info)
-            deviceDao.insertAll(info.toEntity())
+            if (info.connectionType != ConnectionType.Mock) {
+                deviceDao.insertAll(info.toEntity())
+            }
             devices[info.identifier] = device
         }
 
@@ -120,6 +122,8 @@ class DeviceManager(
             is TcpDeviceConnection -> {
                 tcpConnectionDao.insertAll((info.parent as TcpDeviceConnection).toEntity())
             }
+
+            is MockDeviceConnection -> {}
         }
 
         device.connections[info.connectionType] =
@@ -162,6 +166,8 @@ class DeviceManager(
                     tcpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as TcpDeviceCapabilityEntity)
                     // Log.e(TAG, "TODO implement ME registerCapabilities")
                 }
+
+                is MockDeviceConnection -> {}
             }
         }
     }

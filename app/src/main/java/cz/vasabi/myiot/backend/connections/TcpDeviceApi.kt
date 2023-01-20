@@ -171,11 +171,6 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
             val message = connManager.readLine()
             Log.d(TAG, "message $message")
 
-            if (message == null) {
-                Log.w(TAG, "tcp conn $this received null message")
-                continue
-            }
-
             if (message.startsWith("capabilities")) {
                 handleCapabilitiesResult(message)
             } else if (message.startsWith("value")) {

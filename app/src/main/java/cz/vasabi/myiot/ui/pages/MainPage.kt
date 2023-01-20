@@ -35,10 +35,9 @@ sealed class NavigationItem(var route: String, var icon: ImageVector, var title:
     object Discover : NavigationItem("discover", Icons.Default.Hub, "Discover")
     object Devices : NavigationItem("devices", Icons.Default.DevicesOther, "Devices")
     object Debug : NavigationItem("debug", Icons.Default.Info, "Logs")
-    object Test : NavigationItem("test", Icons.Default.BugReport, "test")
 
     companion object {
-        val pages = listOf(Devices, Discover, Debug, Settings, Test)
+        val pages = listOf(Devices, Discover, Debug, Settings)
         var selected = mutableStateOf(pages[0])
     }
 }
@@ -76,6 +75,7 @@ fun BottomNavigationBar(nav: NavController) {
                 },
                 selected = isSelected,
                 onClick = {
+                    if (nav.currentDestination?.route == item.route) return@NavigationBarItem
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     nav.navigate(item.route) {
                         launchSingleTop = true
@@ -120,9 +120,6 @@ fun MainPage(nav: NavHostController) {
                 }
                 composable("debug") {
                     DebugPage()
-                }
-                composable("test") {
-                    TestPage()
                 }
             }
         }

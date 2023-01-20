@@ -1,28 +1,17 @@
 package cz.vasabi.myiot.ui.components
 
-import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -36,20 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
-import cz.vasabi.myiot.viewModels.DevicesViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -64,27 +47,29 @@ enum class BoolWidgetType {
 
 enum class StringWidgetType {
     Realtime,
-    Button
+    Form
 }
 
-@OptIn(ExperimentalMaterialApi::class)
-@SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
-fun BoolWidget(capability: DeviceCapabilityState, viewModel: DevicesViewModel = hiltViewModel()) {
-    val scope = rememberCoroutineScope()
-    val haptic = LocalHapticFeedback.current
-    var showEdit by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var isHovered by rememberSaveable {
-        mutableStateOf(false)
-    }
-    val inputChannel = remember {
-        Channel<Boolean>()
-    }
-
+fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composable ColumnScope.() -> Unit) -> Unit) {
     var selectedStyle by rememberSaveable {
         mutableStateOf(BoolWidgetType.Switch)
+    }
+
+    LaunchedEffect(null) {
+        bottomDrawerRegister {
+            Button(onClick = { selectedStyle = BoolWidgetType.Button }) {
+                Text(text = "button")
+            }
+            Button(onClick = { selectedStyle = BoolWidgetType.Switch }) {
+                Text(text = "switch")
+            }
+        }
+    }
+
+    val scope = rememberCoroutineScope()
+    val inputChannel = remember {
+        Channel<Boolean>()
     }
 
     val interactionSource = remember {
@@ -130,150 +115,63 @@ fun BoolWidget(capability: DeviceCapabilityState, viewModel: DevicesViewModel = 
         })
     }.collectAsState(initial = false)
 
-    /*
-    if (showEdit) {
-        val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Expanded)
-        ModalBottomSheetLayout(sheetContent = {
-            Button(onClick = { }) {
-                Text(text = "hello")
-            }
-            Button(onClick = { }) {
-                Text(text = "UwU")
-            }
-            Button(onClick = { }) {
-                Text(text = "AraAra")
-            }
-        },
-            sheetState = sheetState) {
-            val scope = rememberCoroutineScope()
-            Button(onClick = {
+    when (selectedStyle) {
+        BoolWidgetType.Switch -> {
+            Switch(checked = isChecked, onCheckedChange = {
                 scope.launch {
-                    sheetState.show()
+                    inputChannel.send(it)
                 }
-            }) {
-            }
+                capability.setValue(Data.B(it))
+            })
         }
-        AlertDialog({
-            showEdit = false
-        }, {
-            Text(text = "UwU")
-        }, Modifier, {
-            Text(text = "UwU")
-        }, {
-            Text(text = "Widget Style")
-        }, {
-            Column {
-                Button(onClick = {
-                    selectedStyle = BoolWidgetType.Switch
-                }) {
-                    Text("switch")
-                }
-                Button(onClick = {
-                    selectedStyle = BoolWidgetType.Button
-                }) {
-                    Text("button")
+
+        BoolWidgetType.Button -> {
+            LaunchedEffect(key1 = interactionSource) {
+                capability.setValue(Data.B(isChecked))
+                scope.launch {
+                    inputChannel.send(isChecked)
                 }
             }
-        })
-    }
 
-     */
-
-    var c by remember {
-        mutableStateOf(Color.White)
-    }
-
-    c = if (isHovered) {
-        MaterialTheme.colorScheme.surfaceTint
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(c)
-            .clip(RoundedCornerShape(6.dp))
-            //.background(MaterialTheme.colorScheme.surface)
-            .padding(6.dp)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.openBottomSheet {
-                            Text(text = "Meow")
-                            Button(onClick = { /*TODO*/ }) {
-                                Text(text = "UwU")
-                            }
-                        }
-                    },
-                    onPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.openBottomSheet {
-                            Text(text = "Meow")
-                            Button(onClick = { /*TODO*/ }) {
-                                Text(text = "UwU")
-                            }
-                        }
-                        isHovered = true
-                        awaitRelease()
-                        isHovered = false
-                    },
-                )
-            },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(capability.name, style = MaterialTheme.typography.headlineSmall)
-        Text(capability.description)
-        when (selectedStyle) {
-            BoolWidgetType.Switch -> {
-                Switch(checked = isChecked, onCheckedChange = {
-                    scope.launch {
-                        inputChannel.send(it)
-                    }
-                    capability.setValue(Data.B(it))
-                })
-            }
-
-            BoolWidgetType.Button -> {
-                LaunchedEffect(key1 = interactionSource) {
-                    capability.setValue(Data.B(isChecked))
-                    scope.launch {
-                        inputChannel.send(isChecked)
-                    }
-                }
-
-                Button(interactionSource = interactionSource, onClick = {}) {
-                    Text("$isChecked")
-                }
+            Button(interactionSource = interactionSource, onClick = {}) {
+                Text("$isChecked")
             }
         }
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
-fun StringWidget(capability: DeviceCapabilityState) {
+fun StringWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composable ColumnScope.() -> Unit) -> Unit) {
     val inputFlow = Channel<String>()
 
     val scope = rememberCoroutineScope()
-    var showEdit by rememberSaveable {
-        mutableStateOf(false)
-    }
 
     var selectedStyle by rememberSaveable {
-        mutableStateOf(StringWidgetType.Button)
+        mutableStateOf(StringWidgetType.Form)
     }
 
+    LaunchedEffect(null) {
+        bottomDrawerRegister {
+            Button(onClick = {
+                selectedStyle = StringWidgetType.Realtime
+            }) {
+                Text(text = "realtime")
+            }
+            Button(onClick = {
+                selectedStyle = StringWidgetType.Form
+            }) {
+                Text(text = "form style")
+            }
+        }
+    }
 
     var unCommited by rememberSaveable {
         mutableStateOf("")
     }
 
-
-    val value = remember {
+    val value by remember {
         merge(capability.responses.receiveAsFlow().map {
             when (it) {
                 is Data.S -> it.s
@@ -281,32 +179,6 @@ fun StringWidget(capability: DeviceCapabilityState) {
             }
         }, inputFlow.receiveAsFlow())
     }.collectAsState(initial = "")
-
-    if (showEdit) {
-        AlertDialog({
-            showEdit = false
-        }, {
-            Text(text = "UwU")
-        }, Modifier, {
-            Text(text = "UwU")
-        }, {
-            Text(text = "Widget Style")
-        }, {
-            Column {
-                StringWidgetType.values().forEach {
-                    Button(onClick = {
-                        selectedStyle = it
-                    }) {
-                        Text(it.toString())
-                    }
-                }
-            }
-        })
-    }
-
-    Text(capability.name)
-    Text(capability.description)
-
 
     when (selectedStyle) {
         StringWidgetType.Realtime -> {
@@ -318,99 +190,48 @@ fun StringWidget(capability: DeviceCapabilityState) {
                 }
             }, textStyle = TextStyle(color = Color.White))
         }
-        StringWidgetType.Button -> {
-            OutlinedTextField(
-                value = unCommited,
-                onValueChange = { unCommited = it },
-                textStyle = TextStyle(color = Color.White)
-            )
-            Button(onClick = {
+        StringWidgetType.Form -> {
+            formTextField(text = unCommited, onValueChanged = {unCommited = it}) {
                 scope.launch {
                     capability.setValue(Data.S(unCommited))
                 }
-            }) {
-                Text(text = "update")
             }
             Text(text = "value $value", color = MaterialTheme.colorScheme.onBackground)
         }
     }
-
-    Button(onClick = {
-        showEdit = true
-    }) {
-        Icon(Icons.Filled.Edit, contentDescription = "edit")
-    }
 }
 
 @Composable
-fun IntWidget(capability: DeviceCapabilityState) {
-    var value by rememberSaveable {
-        mutableStateOf(0)
-    }
+fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composable ColumnScope.() -> Unit) -> Unit) {
+    val value by remember {
+        capability.responses.receiveAsFlow().map {
+            when (it) {
+                is Data.I -> it.i
+                else -> TODO()
+            }
+        }
+    }.collectAsState(initial = 0)
     var unCommited by rememberSaveable {
         mutableStateOf("")
     }
 
-    LaunchedEffect(null) {
-        capability.responses.receiveAsFlow().collect {
-            when (it) {
-                is Data.I -> value = it.i
-                else -> TODO()
-            }
-        }
+    formTextField(modifier = Modifier.fillMaxWidth(), unCommited, {
+        unCommited = it
+    }) {
+        val num = unCommited.toIntOrNull() ?: return@formTextField
+        capability.setValue(Data.I(num))
     }
-
-    Column(modifier = Modifier.padding(6.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                capability.name,
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(capability.description, color = MaterialTheme.colorScheme.onBackground)
-            Text(text = "value $value")
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            /*
-            OutlinedTextField(
-                value = unCommited,
-                onValueChange = { unCommited = it },
-                textStyle = TextStyle(color = Color.White)
-                // colors = TextFieldDefaults.outlinedTextFieldColors(textColor = Color.White)
-            )
-            Button(onClick = {
-                val num = unCommited.toIntOrNull() ?: return@Button
-                capability.setValue(Data.I(num))
-            }) {
-                androidx.compose.material3.Text(text = "update")
-            }
-
-             */
-            formTextField(modifier = Modifier.fillMaxWidth(), unCommited, {
-                unCommited = it
-            }) {
-                val num = unCommited.toIntOrNull() ?: return@formTextField
-                capability.setValue(Data.I(num))
-            }
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-
-        if (capability.readings.size > 2) {
-            Chart(
-                readings = capability.readings, timeMilis = 60_000, modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .border(2.dp, MaterialTheme.colorScheme.primary),
-                color = MaterialTheme.colorScheme.tertiary,
-                textColor = MaterialTheme.colorScheme.secondary
-            )
-        }
+    Text(text = "value $value")
+    Spacer(modifier = Modifier.height(6.dp))
+    if (capability.readings.size > 2) {
+        Chart(
+            readings = capability.readings, timeMilis = 60_000, modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .border(2.dp, MaterialTheme.colorScheme.primary),
+            color = MaterialTheme.colorScheme.tertiary,
+            textColor = MaterialTheme.colorScheme.secondary
+        )
     }
 }

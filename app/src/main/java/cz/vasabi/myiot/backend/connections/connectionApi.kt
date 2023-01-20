@@ -10,7 +10,8 @@ enum class ConnectionType {
     Http,
     Tcp,
     Ws,
-    Btl
+    Btl,
+    Mock
 }
 
 enum class ConnectionState {
