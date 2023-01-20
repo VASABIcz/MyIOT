@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -46,9 +45,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
+import cz.vasabi.myiot.viewModels.DevicesViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -69,7 +70,7 @@ enum class StringWidgetType {
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("FlowOperatorInvokedInComposition")
 @Composable
-fun BoolWidget(capability: DeviceCapabilityState) {
+fun BoolWidget(capability: DeviceCapabilityState, viewModel: DevicesViewModel = hiltViewModel()) {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     var showEdit by rememberSaveable {
@@ -129,24 +130,29 @@ fun BoolWidget(capability: DeviceCapabilityState) {
         })
     }.collectAsState(initial = false)
 
+    /*
     if (showEdit) {
-        BottomSheetScaffold(sheetContent = {
-            Column {
-                Button(onClick = {
-                    selectedStyle = BoolWidgetType.Switch
-                }) {
-                    Text("switch")
-                }
-                Button(onClick = {
-                    selectedStyle = BoolWidgetType.Button
-                }) {
-                    Text("button")
-                }
+        val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Expanded)
+        ModalBottomSheetLayout(sheetContent = {
+            Button(onClick = { }) {
+                Text(text = "hello")
             }
-        }) {
-
+            Button(onClick = { }) {
+                Text(text = "UwU")
+            }
+            Button(onClick = { }) {
+                Text(text = "AraAra")
+            }
+        },
+            sheetState = sheetState) {
+            val scope = rememberCoroutineScope()
+            Button(onClick = {
+                scope.launch {
+                    sheetState.show()
+                }
+            }) {
+            }
         }
-        return
         AlertDialog({
             showEdit = false
         }, {
@@ -171,6 +177,8 @@ fun BoolWidget(capability: DeviceCapabilityState) {
         })
     }
 
+     */
+
     var c by remember {
         mutableStateOf(Color.White)
     }
@@ -191,10 +199,22 @@ fun BoolWidget(capability: DeviceCapabilityState) {
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
-                        showEdit = true
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.openBottomSheet {
+                            Text(text = "Meow")
+                            Button(onClick = { /*TODO*/ }) {
+                                Text(text = "UwU")
+                            }
+                        }
                     },
                     onPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.openBottomSheet {
+                            Text(text = "Meow")
+                            Button(onClick = { /*TODO*/ }) {
+                                Text(text = "UwU")
+                            }
+                        }
                         isHovered = true
                         awaitRelease()
                         isHovered = false

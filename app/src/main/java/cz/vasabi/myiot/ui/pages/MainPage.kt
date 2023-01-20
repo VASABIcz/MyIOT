@@ -3,6 +3,7 @@ package cz.vasabi.myiot.ui.pages
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DevicesOther
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Info
@@ -34,9 +35,10 @@ sealed class NavigationItem(var route: String, var icon: ImageVector, var title:
     object Discover : NavigationItem("discover", Icons.Default.Hub, "Discover")
     object Devices : NavigationItem("devices", Icons.Default.DevicesOther, "Devices")
     object Debug : NavigationItem("debug", Icons.Default.Info, "Logs")
+    object Test : NavigationItem("test", Icons.Default.BugReport, "test")
 
     companion object {
-        val pages = listOf(Devices, Discover, Debug, Settings)
+        val pages = listOf(Devices, Discover, Debug, Settings, Test)
         var selected = mutableStateOf(pages[0])
     }
 }
@@ -118,6 +120,9 @@ fun MainPage(nav: NavHostController) {
                 }
                 composable("debug") {
                     DebugPage()
+                }
+                composable("test") {
+                    TestPage()
                 }
             }
         }

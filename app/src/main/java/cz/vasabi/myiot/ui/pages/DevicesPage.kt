@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -171,6 +173,7 @@ fun drawCapability(capability: DeviceCapabilityState) {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
     if (viewModel.selectedDevice.value == null) {
@@ -186,9 +189,16 @@ fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
         Text(text = "No devices added try adding some")
     }
     viewModel.selectedDevice.value?.let { device ->
-        LazyColumn {
-            items(device.connections.values.toList()) {
-                DrawConnection(it, {})
+        ModalBottomSheetLayout(
+            sheetContent = {
+                Text(text = "UwU")
+            },
+            sheetState = viewModel.bottomSheetState,
+        ) {
+            LazyColumn {
+                items(device.connections.values.toList()) {
+                    DrawConnection(it, {})
+                }
             }
         }
     }
