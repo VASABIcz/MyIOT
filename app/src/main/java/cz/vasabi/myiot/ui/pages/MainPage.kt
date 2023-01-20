@@ -3,7 +3,6 @@ package cz.vasabi.myiot.ui.pages
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DevicesOther
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Info
