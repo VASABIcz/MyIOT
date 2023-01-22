@@ -121,7 +121,7 @@ interface WritableCompatibility: DeviceCapability {
     // ?
     fun sendValue(data: CustomDataType) {
 
-    }
+    }unused dependency
 }
 
 interface StreamedCompatibility: DeviceCapability {

@@ -8,10 +8,10 @@ import androidx.lifecycle.viewModelScope
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.vasabi.myiot.backend.connections.DeviceInfo
 import cz.vasabi.myiot.backend.connections.DeviceManager
-import cz.vasabi.myiot.backend.discovery.DeviceResolveManager
-import cz.vasabi.myiot.backend.discovery.DiscoveryManager
-import cz.vasabi.myiot.backend.discovery.implementations.HttpDeviceDiscoveryService
-import cz.vasabi.myiot.backend.discovery.implementations.TcpDeviceDiscoveryService
+import cz.vasabi.myiot.backend.database.discovery.DeviceResolveManager
+import cz.vasabi.myiot.backend.database.discovery.DiscoveryManager
+import cz.vasabi.myiot.backend.database.discovery.implementations.HttpDeviceDiscoveryService
+import cz.vasabi.myiot.backend.database.discovery.implementations.TcpDeviceDiscoveryService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers

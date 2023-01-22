@@ -1,23 +1,23 @@
-package cz.vasabi.myiot.backend.discovery.implementations
+package cz.vasabi.myiot.backend.database.discovery.implementations
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import com.fasterxml.jackson.databind.ObjectMapper
 import cz.vasabi.myiot.backend.connections.DeviceConnection
+import cz.vasabi.myiot.backend.connections.HttpDeviceConnection
 import cz.vasabi.myiot.backend.connections.NsdIpConnectionInfo
-import cz.vasabi.myiot.backend.connections.TcpDeviceConnection
-import cz.vasabi.myiot.backend.discovery.DeviceResolveManager
-import cz.vasabi.myiot.backend.discovery.DiscoveryService
+import cz.vasabi.myiot.backend.database.discovery.DeviceResolveManager
+import cz.vasabi.myiot.backend.database.discovery.DiscoveryService
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class TcpDeviceDiscoveryService(
+class HttpDeviceDiscoveryService(
     nsdManager: NsdManager,
     private val discoveryStopped: (String) -> Unit,
     override var onDeviceResolved: (DeviceConnection) -> Unit,
-    private val objectMapper: ObjectMapper,
+    private val client: HttpClient,
     private val serviceResolveManager: DeviceResolveManager
 ) : DeviceSearchIp(nsdManager), DiscoveryService {
     override val isDone: Boolean
@@ -30,7 +30,7 @@ class TcpDeviceDiscoveryService(
 
         scope.launch {
             val res = serviceResolveManager.resolveAsync(service).await()
-            onDeviceResolved(TcpDeviceConnection(NsdIpConnectionInfo(res), objectMapper))
+            onDeviceResolved(HttpDeviceConnection(NsdIpConnectionInfo(res), client))
         }
     }
 
@@ -40,7 +40,7 @@ class TcpDeviceDiscoveryService(
     }
 
     override fun start() {
-        nsdManager.discoverServices("_iotTcp._tcp", NsdManager.PROTOCOL_DNS_SD, this)
+        nsdManager.discoverServices("_iotHttp._tcp", NsdManager.PROTOCOL_DNS_SD, this)
     }
 
     override fun close() {

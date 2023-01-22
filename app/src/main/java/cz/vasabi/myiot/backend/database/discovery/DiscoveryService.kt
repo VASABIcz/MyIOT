@@ -1,4 +1,4 @@
-package cz.vasabi.myiot.backend.discovery
+package cz.vasabi.myiot.backend.database.discovery
 
 import cz.vasabi.myiot.backend.connections.DeviceConnection
 

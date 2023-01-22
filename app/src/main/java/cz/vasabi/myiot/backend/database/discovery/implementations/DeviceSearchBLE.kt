@@ -1,11 +1,11 @@
-package cz.vasabi.myiot.backend.discovery.implementations
+package cz.vasabi.myiot.backend.database.discovery.implementations
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.os.Handler
 import cz.vasabi.myiot.backend.connections.DeviceConnection
-import cz.vasabi.myiot.backend.discovery.DiscoveryService
+import cz.vasabi.myiot.backend.database.discovery.DiscoveryService
 
 
 // TODO

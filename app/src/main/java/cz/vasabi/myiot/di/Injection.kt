@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import cz.vasabi.myiot.backend.connections.DeviceManager
 import cz.vasabi.myiot.backend.database.AppDatabase
-import cz.vasabi.myiot.backend.discovery.DeviceResolveManager
+import cz.vasabi.myiot.backend.database.discovery.DeviceResolveManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

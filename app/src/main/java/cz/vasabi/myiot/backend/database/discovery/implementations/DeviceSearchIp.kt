@@ -1,4 +1,4 @@
-package cz.vasabi.myiot.backend.discovery.implementations
+package cz.vasabi.myiot.backend.database.discovery.implementations
 
 import android.content.ContentValues
 import android.net.nsd.NsdManager
