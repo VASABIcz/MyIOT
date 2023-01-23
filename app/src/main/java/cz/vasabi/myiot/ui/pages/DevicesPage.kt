@@ -20,9 +20,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomDrawer
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,8 +59,8 @@ import cz.vasabi.myiot.backend.connections.Device
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
 import cz.vasabi.myiot.backend.connections.DeviceConnectionState
 import cz.vasabi.myiot.backend.connections.DeviceState
-import cz.vasabi.myiot.ui.components.DrawConnectionState
 import cz.vasabi.myiot.ui.components.BoolWidget
+import cz.vasabi.myiot.ui.components.DrawConnectionState
 import cz.vasabi.myiot.ui.components.IntWidget
 import cz.vasabi.myiot.ui.components.SelectableButton
 import cz.vasabi.myiot.ui.components.StringWidget
@@ -72,7 +77,33 @@ fun DevicesPage(viewModel: DevicesViewModel = hiltViewModel()) {
         drawerContent = {
             ModalDrawerSheet {
                 LazyColumn {
-                    items(viewModel.devices.values.toList()) {
+                    item {
+                        Row(Modifier.padding(4.dp)) {
+                            Icon(
+                                Icons.Filled.Favorite,
+                                contentDescription = "favourite devices icon"
+                            )
+                            Text(text = "Favorite Devices")
+                        }
+                    }
+                    items(viewModel.devices.values.filter { it.isFavourite.value }) {
+                        DrawDevice(it, {
+                            viewModel.selectedDevice.value = it
+                            scope.launch {
+                                viewModel.sideDrawerState.close()
+                            }
+                        })
+                    }
+                    item {
+                        Divider()
+                    }
+                    item {
+                        Row(Modifier.padding(4.dp)) {
+                            Icon(Icons.Filled.Devices, contentDescription = "devices icon")
+                            Text(text = "Devices", Modifier.padding(4.dp))
+                        }
+                    }
+                    items(viewModel.devices.values.filter { !it.isFavourite.value }) {
                         DrawDevice(it, {
                             viewModel.selectedDevice.value = it
                             scope.launch {
@@ -92,26 +123,38 @@ fun DevicesPage(viewModel: DevicesViewModel = hiltViewModel()) {
 
 @Composable
 fun DrawDevice(device: DeviceState, onCLick: () -> Unit, viewModel: DevicesViewModel = viewModel()) {
-    Box(modifier = Modifier.padding(6.dp)) {
+    Row(modifier = Modifier.padding(6.dp)) {
         SelectableButton(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp)),
+                .fillMaxWidth(),
             onCLick = {
                 viewModel.selectedDevice.value = device
                 onCLick()
             },
             isSelected = device == viewModel.selectedDevice.value
         ) {
-            DrawConnectionState(
-                connectionState = device.connectionState, modifier = Modifier
-                    .size(26.dp)
-                    .padding(5.dp)
-            )
-            // Icon(Icons.Default.AddCircle, "online status", tint = connected)
-            Column {
+            Box {
+                IconButton(onClick = {
+                    device.isFavourite.value = !device.isFavourite.value
+                }) {
+                    if (device.isFavourite.value) {
+                        Icon(Icons.Default.Star, contentDescription = "favourite device icon")
+                    } else {
+                        Icon(Icons.TwoTone.Star, contentDescription = "favourite device icon")
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                DrawConnectionState(
+                    connectionState = device.connectionState, modifier = Modifier
+                        .size(26.dp)
+                        .padding(5.dp)
+                )
                 Text(device.name)
-                Text(text = ("id: " + device.identifier))
             }
         }
     }
@@ -124,9 +167,7 @@ class MockDevice : Device {
 
 }
 
-class MockDeviceState(device: Device) : DeviceState(device) {
-
-}
+class MockDeviceState(device: Device) : DeviceState(device)
 
 @Composable
 @Preview
@@ -265,21 +306,6 @@ fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
         Text(text = "No devices added try adding some")
     }
     viewModel.selectedDevice.value?.let { device ->
-        /*
-        ModalBottomSheetLayout(
-            sheetContent = viewModel.bottomDrawerContent.value,
-            sheetState = viewModel.bottomSheetState,
-            sheetShape = RoundedCornerShape(4.dp),
-            sheetBackgroundColor = MaterialTheme.colorScheme.background
-        ) {
-            LazyColumn {
-                items(device.connections.values.toList()) {
-                    DrawConnection(it, {})
-                }
-            }
-        }
-
-         */
         BottomDrawer(
             drawerContent = {
                 Column(Modifier.fillMaxWidth()) {
@@ -302,7 +328,7 @@ fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
         ) {
             LazyColumn {
                 items(device.connections.values.toList()) {
-                    DrawConnection(it, {})
+                    DrawConnection(it)
                 }
             }
         }
@@ -312,10 +338,11 @@ fun DevicesPageMain(viewModel: DevicesViewModel = viewModel()) {
 @Composable
 fun DrawConnection(
     conn: DeviceConnectionState,
-    onConfigure: () -> Unit,
     viewModel: DevicesViewModel = hiltViewModel()
 ) {
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+
     Column(
         Modifier
             .padding(7.dp)
@@ -333,7 +360,11 @@ fun DrawConnection(
                     detectTapGestures(
                         onLongPress = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onConfigure()
+                            scope.launch {
+                                viewModel.openBottomSheet {
+                                    Text("")
+                                }
+                            }
                         },
                         onPress = {
                             awaitRelease()

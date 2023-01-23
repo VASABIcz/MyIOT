@@ -5,15 +5,20 @@ import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -58,12 +64,32 @@ fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Compos
 
     LaunchedEffect(null) {
         bottomDrawerRegister {
+            Column(Modifier.padding(4.dp)) {
+                Text(text = "interaction type")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = selectedStyle == BoolWidgetType.Switch,
+                        onClick = { selectedStyle = BoolWidgetType.Switch },
+                    )
+                    Text(text = "Switch")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = selectedStyle == BoolWidgetType.Button,
+                        onClick = { selectedStyle = BoolWidgetType.Button },
+                    )
+                    Text(text = "Button")
+                }
+            }
+            /*
             Button(onClick = { selectedStyle = BoolWidgetType.Button }) {
                 Text(text = "button")
             }
             Button(onClick = { selectedStyle = BoolWidgetType.Switch }) {
                 Text(text = "switch")
             }
+
+             */
         }
     }
 
@@ -203,6 +229,10 @@ fun StringWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Comp
 
 @Composable
 fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composable ColumnScope.() -> Unit) -> Unit) {
+    var showGraph by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val value by remember {
         capability.responses.receiveAsFlow().map {
             when (it) {
@@ -215,6 +245,34 @@ fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composa
         mutableStateOf("")
     }
 
+    LaunchedEffect(null) {
+        bottomDrawerRegister {
+            Column(Modifier.padding(4.dp)) {
+                Text(text = "interaction type")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = false,
+                        onClick = { },
+                    )
+                    Text(text = "realtime")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = true,
+                        onClick = { },
+                    )
+                    Text(text = "form-style")
+                }
+                Divider()
+                Text(text = "graph")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(checked = showGraph, onCheckedChange = { showGraph = !showGraph })
+                    Text(text = "show graph")
+                }
+            }
+        }
+    }
+
     formTextField(modifier = Modifier.fillMaxWidth(), unCommited, {
         unCommited = it
     }) {
@@ -223,7 +281,7 @@ fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composa
     }
     Text(text = "value $value")
     Spacer(modifier = Modifier.height(6.dp))
-    if (capability.readings.size > 2) {
+    if (capability.readings.size > 2 && showGraph) {
         Chart(
             readings = capability.readings, timeMilis = 60_000, modifier = Modifier
                 .fillMaxWidth()

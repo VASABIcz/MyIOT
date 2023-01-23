@@ -21,6 +21,7 @@ import javax.inject.Inject
 
 open class DeviceState(private val device: Device) : Device by device {
     val connections: SnapshotStateMap<ConnectionType, DeviceConnectionState> = mutableStateMapOf()
+    val isFavourite = mutableStateOf(false)
 
     val connectionState: ConnectionState
         get() {
