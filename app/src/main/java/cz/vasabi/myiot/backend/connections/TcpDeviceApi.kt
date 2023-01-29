@@ -314,7 +314,6 @@ class TcpDeviceCapability(
 ) : DeviceCapability, BaseDeviceCapability by device {
     init {
         parent.registerCapability(this)
-
     }
 
     override fun toEntity(identifier: String): TcpDeviceCapabilityEntity {
