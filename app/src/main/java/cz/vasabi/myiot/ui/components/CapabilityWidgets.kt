@@ -1,7 +1,5 @@
 package cz.vasabi.myiot.ui.components
 
-import android.content.ContentValues.TAG
-import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -36,9 +34,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
+import cz.vasabi.myiot.backend.logging.logger
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -81,15 +79,6 @@ fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Compos
                     Text(text = "Button")
                 }
             }
-            /*
-            Button(onClick = { selectedStyle = BoolWidgetType.Button }) {
-                Text(text = "button")
-            }
-            Button(onClick = { selectedStyle = BoolWidgetType.Switch }) {
-                Text(text = "switch")
-            }
-
-             */
         }
     }
 
@@ -106,8 +95,7 @@ fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Compos
         merge(capability.responses.receiveAsFlow().map {
             when (it) {
                 is Data.B -> {
-                    SingleState.events.add("received new state pog $it")
-                    Log.d(TAG, "received new state pog $it")
+                    logger.debug("received new state pog $it")
                     it.b
                 }
 

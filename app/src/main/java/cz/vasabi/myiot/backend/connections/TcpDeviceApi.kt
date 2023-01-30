@@ -1,7 +1,5 @@
 package cz.vasabi.myiot.backend.connections
 
-import android.content.ContentValues.TAG
-import android.util.Log
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import cz.vasabi.myiot.backend.api.Data
@@ -9,6 +7,7 @@ import cz.vasabi.myiot.backend.api.GenericHttpResponse
 import cz.vasabi.myiot.backend.api.GenericResponse
 import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
 import cz.vasabi.myiot.backend.database.TcpDeviceConnectionEntity
+import cz.vasabi.myiot.backend.logging.logger
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Connection
 import io.ktor.network.sockets.aSocket
@@ -72,7 +71,7 @@ internal class TcpConnectionManager(
                 onConnectionChanged(ConnectionState.Connected)
                 break
             } catch (t: Throwable) {
-                Log.w(TAG, "socket reconnect ${t.message}")
+                logger.warning("socket reconnect ${t.message}", this)
                 delay(1000)
             }
         }
@@ -83,7 +82,7 @@ internal class TcpConnectionManager(
             try {
                 return socket?.input?.readUTF8Line() ?: continue
             } catch (t: Throwable) {
-                Log.w(TAG, "socket readLine ${t.message}")
+                logger.debug("socket readLine ${t.message}", this)
                 onConnectionChanged(ConnectionState.Disconnected)
                 reconnect()
             }
@@ -97,7 +96,7 @@ internal class TcpConnectionManager(
                 socket?.output?.flush()
                 return
             } catch (t: Throwable) {
-                Log.w(TAG, "socket write ${t.message}")
+                logger.debug("socket write ${t.message}", this)
                 onConnectionChanged(ConnectionState.Disconnected)
                 reconnect()
             }
@@ -155,7 +154,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         val capability = capabilities[message.route]
 
         if (capability == null) {
-            Log.w(TAG, "undelivered tcp message $message")
+            logger.debug("undelivered tcp message $message", this)
             return
         }
 
@@ -169,14 +168,14 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
     private suspend fun socketReader() {
         while (true) {
             val message = connManager.readLine()
-            Log.d(TAG, "message $message")
+            logger.debug("message $message", this)
 
             if (message.startsWith("capabilities")) {
                 handleCapabilitiesResult(message)
             } else if (message.startsWith("value")) {
                 handleValueResult(message)
             } else {
-                Log.e(TAG, "tcp conn $this received unknown message: $message")
+                logger.error("tcp conn $this received unknown message: $message", this)
             }
         }
     }
@@ -186,7 +185,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         val res: List<JsonDeviceCapability> = try {
             objectMapper.readValue(striped)
         } catch (_: Throwable) {
-            Log.e(TAG, "$message was invalid capability result")
+            logger.error("$message was invalid capability result", this)
             // FIXME not sure about this
             capabilitiesChannel.receive().complete(null)
             return
@@ -195,7 +194,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         val future = capabilitiesChannel.receive()
 
         if (future.isCancelled) {
-            Log.e(TAG, "we meet again")
+            logger.error("we meet again", this)
             return
         }
 
@@ -209,7 +208,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         val striped = message.replace("value ", "")
         val routeEnd = striped.indexOf(" ")
         if (routeEnd == -1) {
-            Log.e(TAG, "invalid value result $message")
+            logger.error("invalid value result $message", this)
             return
         }
         val route = striped.slice(0 until routeEnd)
@@ -217,7 +216,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         val data: GenericHttpResponse = try {
             objectMapper.readValue(payload)
         } catch (_: Throwable) {
-            Log.e(TAG, "failed to parse generic response tcp $message , parsed: $payload")
+            logger.error("failed to parse generic response tcp $message , parsed: $payload", this)
             return
         }
         responseChannel.send(TcpResponse(data.value, data.type, route))
@@ -230,7 +229,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
                 is TcpRequest.Get -> connManager.write("get ${request.route}\n")
                 is TcpRequest.Post -> connManager.write("post ${request.route} ${request.data}\n")
             }
-            Log.e(TAG, "finished writing $request")
+            logger.debug("finished writing $request", this)
         }
     }
 
@@ -242,19 +241,20 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
     }
 
     override suspend fun getCapabilities(): List<DeviceCapability>? {
-        Log.w(TAG, "tcp requesting capabilities")
+        logger.debug("tcp requesting capabilities", this)
         val future = CompletableDeferred<List<DeviceCapability>?>()
-        Log.e(TAG, "HUH")
+        logger.error("HUH", this)
         requestChannel.send(TcpRequest.Capabilities)
         capabilitiesChannel.send(future)
-        Log.e(TAG, "FUCK")
-        Log.e(TAG, "GOOD")
+        logger.error("FUCK", this)
+        logger.error("GOOD", this)
 
         val res = withTimeoutOrNull(1000) {
             future.await()
         }
 
-        Log.w(TAG, "getCapabilities tcp $res")
+
+        logger.error("getCapabilities tcp $res", this)
 
         return res
     }

@@ -1,11 +1,9 @@
 package cz.vasabi.myiot.backend.connections
 
-import android.content.ContentValues.TAG
-import android.util.Log
-import cz.vasabi.myiot.SingleState
 import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.api.GenericHttpResponse
 import cz.vasabi.myiot.backend.database.HttpDeviceConnectionEntity
+import cz.vasabi.myiot.backend.logging.logger
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -26,16 +24,17 @@ class HttpDeviceCapability(
     override fun requestValue() {
         scope.launch {
             try {
-                Log.e(TAG, "sending GET")
+                logger.debug("sending GET", this)
                 val res = client.get("http://${info.host}:${info.port}${route}")
 
-                SingleState.events.add(res.toString())
+                logger.debug(res.toString(), this)
 
                 val resValue: GenericHttpResponse = res.body()
-                SingleState.events.add("received $resValue")
+                logger.debug("received $resValue", this)
                 onReceived(resValue.toData())
             } catch (e: Throwable) {
-                Log.w(TAG, e)
+                // FIXME
+                logger.debug(e.toString(), this)
             }
         }
     }
@@ -43,23 +42,23 @@ class HttpDeviceCapability(
     override fun setValue(value: Data) {
         scope.launch {
             val res = try {
-                Log.e(TAG, "sending POST http://${info.host}:${info.port}${route}")
+                logger.debug("sending POST http://${info.host}:${info.port}${route}", this)
                 client.post("http://${info.host}:${info.port}${route}") {
                     setBody(value.jsonBody)
                 }
             } catch (_: Exception) {
                 return@launch
             }
-            SingleState.events.add(res.toString())
+            logger.debug(res.toString(), this)
 
             val resValue: GenericHttpResponse = res.body()
-            SingleState.events.add("received $resValue")
+            logger.debug("received $resValue", this)
             onReceived(resValue.toData())
         }
     }
 
     override var onReceived: suspend (Data) -> Unit = {
-        Log.e(TAG, "what is dis?")
+        logger.debug("what is dis?", this)
     }
 
     override fun close() {
@@ -83,11 +82,11 @@ class HttpDeviceConnection(val info: IpConnectionInfo, private val client: HttpC
                 try {
                     val x: List<JsonDeviceCapability> =
                         client.get("http://${info.host}:${info.port}/api/capabilities").body()
-                    Log.d(TAG, x.toString())
+                    logger.debug(x.toString(), this)
                     onConnectionChanged(ConnectionState.Connected)
                 } catch (e: Exception) {
-                    Log.d(TAG, e.message.toString())
-                    e.printStackTrace()
+                    logger.debug(e.message.toString(), this)
+                    logger.error(e.stackTraceToString(), this)
                     onConnectionChanged(ConnectionState.Disconnected)
                 }
                 delay(5000)

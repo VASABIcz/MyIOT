@@ -1,7 +1,5 @@
 package cz.vasabi.myiot.backend.connections
 
-import android.content.ContentValues
-import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -10,6 +8,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.database.CapabilityReadingDao
+import cz.vasabi.myiot.backend.logging.logger
 import cz.vasabi.myiot.ui.components.Reading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +47,7 @@ class DeviceCapabilityState(
 
     init {
         deviceCapability.onReceived = { value ->
-            Log.d(ContentValues.TAG, "adding new value to channel $value $deviceCapability")
+            logger.debug("adding new value to channel $value $deviceCapability", this)
             scope.launch {
                 if (deviceCapability.type == "int") {
                     readings.add(Reading(Instant.now(), value.value.toDouble().toFloat()))
@@ -91,10 +90,10 @@ class DeviceConnectionState(
     init {
         deviceConnection.onConnectionChanged = {
             if (it == ConnectionState.Connected && connected.value != ConnectionState.Connected) {
-                Log.d(ContentValues.TAG, "device just reconnected POG ${deviceCapabilities.size}")
+                logger.debug("device just reconnected POG ${deviceCapabilities.size}", this)
                 deviceCapabilities.forEach {
                     scope.launch {
-                        Log.d(ContentValues.TAG, "requesting value $it")
+                        logger.debug("requesting value $it", this)
                         it.requestValue()
                     }
                 }
@@ -102,21 +101,7 @@ class DeviceConnectionState(
 
             connected.value = it
         }
-        scope.launch {
-            val capabilities = getCapabilities() ?: return@launch
-            deviceCapabilities.forEach {
-                it.close()
-            }
-            deviceCapabilities.clear()
-            deviceCapabilities.addAll(capabilities.map {
-                DeviceCapabilityState(
-                    it,
-                    this@DeviceConnectionState
-
-                )
-            })
-            deviceManager.registerCapabilities(capabilities, deviceConnection)
-        }
+        updateCapabilities()
     }
 
     override suspend fun disconnect() {

@@ -64,22 +64,13 @@ fun DiscoverPage(viewModel: DiscoverViewModel = hiltViewModel()) {
                     }
                 }
             }
-            return
-        }
-        Box(
-            Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (viewModel.showLoading.value) {
-                CircularProgressIndicator()
-            }
-
-        }
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (viewModel.showLoading.value) {
-                CircularProgressIndicator()
-            } else {
-                Text(text = "unable to find any devices")
+        } else {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (viewModel.showLoading.value) {
+                    CircularProgressIndicator()
+                } else {
+                    Text(text = "unable to find any devices")
+                }
             }
         }
     }

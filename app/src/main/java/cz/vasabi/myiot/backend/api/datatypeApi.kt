@@ -43,7 +43,7 @@ interface GenericResponse {
             "float" -> Data.F(value.toFloat())
             "string" -> Data.S(value)
             else -> {
-                throw Exception("unknow data $this")
+                throw Exception("unknown data $this")
             }
         }
     }

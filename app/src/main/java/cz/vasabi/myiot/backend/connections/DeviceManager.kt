@@ -1,13 +1,12 @@
 package cz.vasabi.myiot.backend.connections
 
-import android.content.ContentValues.TAG
-import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.vasabi.myiot.backend.database.AppDatabase
 import cz.vasabi.myiot.backend.database.HttpDeviceCapabilityEntity
 import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
+import cz.vasabi.myiot.backend.logging.logger
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +32,7 @@ class DeviceManager(
         val conn = httpConnectionDao.findConnection(device.identifier)
 
         if (conn == null) {
-            Log.w(TAG, "mo http conn found")
+            logger.warning("mo http conn found", this)
             return
         }
 
@@ -115,7 +114,7 @@ class DeviceManager(
         when (info.parent) {
             is DeviceConnectionState -> throw IllegalStateException()
             is HttpDeviceConnection -> {
-                Log.e(TAG, "adding http conn to DB")
+                logger.debug("adding http conn to DB", this)
                 httpConnectionDao.insertAll((info.parent as HttpDeviceConnection).toEntity())
             }
 
@@ -128,20 +127,8 @@ class DeviceManager(
 
         device.connections[info.connectionType] =
             DeviceConnectionState(info.parent, this@DeviceManager).apply {
-                scope.launch {
-                    connect()
-                }
+                connect()
             }
-
-        // return@launch
-
-        devices[info.identifier]?.connections?.set(
-            info.parent.connectionType,
-            DeviceConnectionState(info.parent, this@DeviceManager)
-        )
-        scope.launch {
-            info.parent.connect()
-        }
     }
 
 
@@ -164,7 +151,6 @@ class DeviceManager(
 
                 is TcpDeviceConnection -> {
                     tcpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as TcpDeviceCapabilityEntity)
-                    // Log.e(TAG, "TODO implement ME registerCapabilities")
                 }
 
                 is MockDeviceConnection -> {}

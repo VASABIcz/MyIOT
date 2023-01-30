@@ -2,7 +2,7 @@ package cz.vasabi.myiot.backend.database.discovery
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import cz.vasabi.myiot.SingleState
+import cz.vasabi.myiot.backend.logging.logger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -38,12 +38,12 @@ class DeviceResolveManager(private val nsdManager: NsdManager) {
         var isDone = Job()
 
         override fun onResolveFailed(p0: NsdServiceInfo?, p1: Int) {
-            SingleState.events.add("failed to resolve service $p1 $p0")
+            logger.debug("failed to resolve service $p1 $p0")
             isDone.complete()
         }
 
         override fun onServiceResolved(p0: NsdServiceInfo?) {
-            SingleState.events.add("resolved service $p0")
+            logger.debug("resolved service $p0")
             if (p0 == null) return
             onDeviceResolved(p0)
             isDone.complete()
