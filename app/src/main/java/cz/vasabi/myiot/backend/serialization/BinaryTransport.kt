@@ -1,5 +1,6 @@
 package cz.vasabi.myiot.backend.serialization
 
+import io.ktor.utils.io.bits.reverseByteOrder
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -9,7 +10,7 @@ class BinarySerializer : Serializer {
     val data = ByteArrayOutputStream()
     private val array = DataOutputStream(data)
     override fun writeInt(it: Int): Boolean {
-        array.writeInt(it)
+        array.writeInt(it.reverseByteOrder())
         return true
     }
 
@@ -25,7 +26,7 @@ class BinarySerializer : Serializer {
     }
 
     override fun writeFloat(it: Float): Boolean {
-        array.writeFloat(it)
+        array.writeFloat(it.reverseByteOrder())
         return true
     }
 }
@@ -33,11 +34,11 @@ class BinarySerializer : Serializer {
 class BinaryDeserializer(stream: InputStream) : Deserializer {
     private val array = DataInputStream(stream)
     override fun readInt(): Int {
-        return array.readInt()
+        return array.readInt().reverseByteOrder()
     }
 
     override fun readString(): String {
-        val size = array.readInt()
+        val size = array.readInt().reverseByteOrder()
         return array.readNBytes(size).decodeToString()
     }
 
@@ -46,6 +47,6 @@ class BinaryDeserializer(stream: InputStream) : Deserializer {
     }
 
     override fun readFloat(): Float {
-        return array.readFloat()
+        return array.readFloat().reverseByteOrder()
     }
 }

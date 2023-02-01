@@ -1,6 +1,5 @@
 package cz.vasabi.myiot.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,15 +28,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import cz.vasabi.myiot.backend.api.Data
 import cz.vasabi.myiot.backend.connections.DeviceCapabilityState
-import cz.vasabi.myiot.backend.logging.logger
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -92,34 +86,27 @@ fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Compos
     }
 
     val isChecked by remember {
-        merge(capability.responses.receiveAsFlow().map {
-            when (it) {
-                is Data.B -> {
-                    logger.debug("received new state pog $it")
-                    it.b
-                }
-
-                else -> TODO()
-            }
+        merge(capability.responses.receiveAsFlow().mapNotNull {
+            it.getBool()
         }, inputChannel.receiveAsFlow(), interactionSource.interactions.mapNotNull {
             return@mapNotNull when (it) {
                 is PressInteraction.Press -> {
                     scope.launch {
-                        capability.setValue(Data.B(true))
+                        capability.setValue(true, "bool")
                     }
                     true
                 }
 
                 is PressInteraction.Release -> {
                     scope.launch {
-                        capability.setValue(Data.B(false))
+                        capability.setValue(false, "bool")
                     }
                     false
                 }
 
                 is PressInteraction.Cancel -> {
                     scope.launch {
-                        capability.setValue(Data.B(false))
+                        capability.setValue(false, "bool")
                     }
                     false
                 }
@@ -135,13 +122,13 @@ fun BoolWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Compos
                 scope.launch {
                     inputChannel.send(it)
                 }
-                capability.setValue(Data.B(it))
+                capability.setValue(it, "bool")
             })
         }
 
         BoolWidgetType.Button -> {
             LaunchedEffect(key1 = interactionSource) {
-                capability.setValue(Data.B(isChecked))
+                capability.setValue(isChecked, "bool")
                 scope.launch {
                     inputChannel.send(isChecked)
                 }
@@ -186,11 +173,8 @@ fun StringWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Comp
     }
 
     val value by remember {
-        merge(capability.responses.receiveAsFlow().map {
-            when (it) {
-                is Data.S -> it.s
-                else -> TODO()
-            }
+        merge(capability.responses.receiveAsFlow().mapNotNull {
+            it.getString()
         }, inputFlow.receiveAsFlow())
     }.collectAsState(initial = "")
 
@@ -198,7 +182,7 @@ fun StringWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Comp
         StringWidgetType.Realtime -> {
             OutlinedTextField(value = unCommited, onValueChange = {
                 unCommited = it
-                capability.setValue(Data.S(it))
+                capability.setValue(it, "string")
                 scope.launch {
                     inputFlow.send(it)
                 }
@@ -207,7 +191,7 @@ fun StringWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Comp
         StringWidgetType.Form -> {
             formTextField(text = unCommited, onValueChanged = {unCommited = it}) {
                 scope.launch {
-                    capability.setValue(Data.S(unCommited))
+                    capability.setValue(unCommited, "string")
                 }
             }
             Text(text = "value $value", color = MaterialTheme.colorScheme.onBackground)
@@ -222,11 +206,8 @@ fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composa
     }
 
     val value by remember {
-        capability.responses.receiveAsFlow().map {
-            when (it) {
-                is Data.I -> it.i
-                else -> TODO()
-            }
+        capability.responses.receiveAsFlow().mapNotNull {
+            it.getInt()
         }
     }.collectAsState(initial = 0)
     var unCommited by rememberSaveable {
@@ -265,11 +246,12 @@ fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composa
         unCommited = it
     }) {
         val num = unCommited.toIntOrNull() ?: return@formTextField
-        capability.setValue(Data.I(num))
+        capability.setValue(num, "int")
     }
     Text(text = "value $value")
     Spacer(modifier = Modifier.height(6.dp))
     if (capability.readings.size > 2 && showGraph) {
+        /* FIXME
         Chart(
             readings = capability.readings, timeMilis = 60_000, modifier = Modifier
                 .fillMaxWidth()
@@ -279,5 +261,7 @@ fun IntWidget(capability: DeviceCapabilityState, bottomDrawerRegister: (@Composa
             color = MaterialTheme.colorScheme.tertiary,
             textColor = MaterialTheme.colorScheme.secondary
         )
+
+         */
     }
 }

@@ -3,6 +3,7 @@ package cz.vasabi.myiot.backend.serialization
 import FieldOrdering
 import PrimarySerializable
 import TypeField
+import cz.vasabi.myiot.backend.logging.logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
@@ -34,7 +35,7 @@ fun deserializeInternal(
         }
         return ret
     }
-
+    logger.debug("parsing ${clazz.qualifiedName}")
     annotations.addAll(clazz.findAnnotations(TypeField::class))
     if (clazz.qualifiedName?.startsWith("kotlin.") == true) {
         return when (clazz.simpleName) {

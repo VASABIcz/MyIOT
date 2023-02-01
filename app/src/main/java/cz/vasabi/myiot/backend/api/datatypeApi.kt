@@ -1,55 +1,50 @@
 package cz.vasabi.myiot.backend.api
 
-import com.fasterxml.jackson.annotation.JsonFormat
-sealed interface Data {
-    class B(val b: Boolean): Data
-    class F(val f: Float): Data
-    class I(val i: Int): Data
-    class S(val s: String): Data
+import cz.vasabi.myiot.backend.serialization.BinaryDeserializer
+import cz.vasabi.myiot.backend.serialization.BinarySerializer
+import cz.vasabi.myiot.backend.serialization.Deserializer
+import cz.vasabi.myiot.backend.serialization.serialize
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
-    val type: String
-        get() = when (this) {
-            is B -> "bool"
-            is F -> "float"
-            is I -> "int"
-            is S -> "string"
+class DataMessage(val type: String, val data: Deserializer) {
+    fun getBool(): Boolean? {
+        if (type != "bool") {
+            return null
         }
+        return data.readBool()
+    }
 
-    val value: String
-        get() = when (this) {
-            is B -> this.b.toString()
-            is F -> this.f.toString()
-            is I -> this.i.toString()
-            is S -> {
-                // FIXME proper string escaping
-                val res = this.s
-                    .replace("\n", "\\n")
-                "\"$res\""
-            }
+    fun getString(): String? {
+        if (type != "string") {
+            return null
         }
+        return data.readString()
+    }
 
-    val jsonBody: String
-        get() = "{\"type\": \"${type}\", \"value\": ${value}}"
-}
-
-interface GenericResponse {
-    val value: String
-    val type: String
-
-    fun toData(): Data {
-        return when (type) {
-            "bool" -> Data.B(value.toBoolean())
-            "int" -> Data.I(value.toInt())
-            "float" -> Data.F(value.toFloat())
-            "string" -> Data.S(value)
-            else -> {
-                throw Exception("unknown data $this")
-            }
+    fun getInt(): Int? {
+        if (type != "int") {
+            return null
         }
+        return data.readInt()
+    }
+
+    fun getFloat(): Float? {
+        if (type != "float") {
+            return null
+        }
+        return data.readFloat()
     }
 }
 
-data class GenericHttpResponse(
-    @JsonFormat(shape = JsonFormat.Shape.STRING) override val value: String,
-    override val type: String
-) : GenericResponse
+fun deserializeMsg(data: InputStream): DataMessage {
+    val d = BinaryDeserializer(data)
+    return DataMessage(d.readString(), d)
+}
+
+fun serialize(type: String, value: Any): ByteArrayOutputStream {
+    val s = BinarySerializer()
+    s.writeString(type)
+    s.serialize(value)
+    return s.data
+}

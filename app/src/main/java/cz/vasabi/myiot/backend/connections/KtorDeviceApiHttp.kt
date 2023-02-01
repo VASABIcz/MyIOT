@@ -1,14 +1,20 @@
 package cz.vasabi.myiot.backend.connections
 
-import cz.vasabi.myiot.backend.api.Data
-import cz.vasabi.myiot.backend.api.GenericHttpResponse
+import JsonDeviceCapability
+import cz.vasabi.myiot.backend.api.DataMessage
+import cz.vasabi.myiot.backend.api.deserializeMsg
+import cz.vasabi.myiot.backend.api.serialize
 import cz.vasabi.myiot.backend.database.HttpDeviceConnectionEntity
 import cz.vasabi.myiot.backend.logging.logger
+import cz.vasabi.myiot.backend.serialization.BinaryDeserializer
+import cz.vasabi.myiot.backend.serialization.deserialize
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.util.decodeBase64Bytes
+import io.ktor.util.encodeBase64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -29,9 +35,9 @@ class HttpDeviceCapability(
 
                 logger.debug(res.toString(), this)
 
-                val resValue: GenericHttpResponse = res.body()
+                val resValue: ByteArray = res.body()
                 logger.debug("received $resValue", this)
-                onReceived(resValue.toData())
+                onReceived(deserializeMsg(resValue.inputStream()))
             } catch (e: Throwable) {
                 // FIXME
                 logger.debug(e.toString(), this)
@@ -39,25 +45,31 @@ class HttpDeviceCapability(
         }
     }
 
-    override fun setValue(value: Data) {
+    override fun setValue(value: Any, type: String) {
         scope.launch {
+            println("serial $type $value")
+            val data = serialize(type, value)
+            println("ser data ${data.size()} ${data.toByteArray().decodeToString()}")
+            data.toByteArray().forEach {
+                println("byte $it")
+            }
             val res = try {
                 logger.debug("sending POST http://${info.host}:${info.port}${route}", this)
                 client.post("http://${info.host}:${info.port}${route}") {
-                    setBody(value.jsonBody)
+                    setBody(data.toByteArray().encodeBase64())
                 }
             } catch (_: Exception) {
                 return@launch
             }
             logger.debug(res.toString(), this)
 
-            val resValue: GenericHttpResponse = res.body()
+            val resValue = deserializeMsg(res.body<ByteArray>().inputStream())
             logger.debug("received $resValue", this)
-            onReceived(resValue.toData())
+            onReceived(resValue)
         }
     }
 
-    override var onReceived: suspend (Data) -> Unit = {
+    override var onReceived: suspend (DataMessage) -> Unit = {
         logger.debug("what is dis?", this)
     }
 
@@ -80,9 +92,12 @@ class HttpDeviceConnection(val info: IpConnectionInfo, private val client: HttpC
         scope.launch {
             while (true) {
                 try {
-                    val x: List<JsonDeviceCapability> =
-                        client.get("http://${info.host}:${info.port}/api/capabilities").body()
-                    logger.debug(x.toString(), this)
+                    val x = client.get("http://${info.host}:${info.port}/api/capabilities")
+                        .body<String>().decodeBase64Bytes()
+                    logger.debug("msg size: ${x.size}", this)
+                    val res =
+                        BinaryDeserializer(x.inputStream()).deserialize<List<JsonDeviceCapability>>()
+                    logger.debug(res.toString(), this)
                     onConnectionChanged(ConnectionState.Connected)
                 } catch (e: Exception) {
                     logger.debug(e.message.toString(), this)
@@ -100,11 +115,20 @@ class HttpDeviceConnection(val info: IpConnectionInfo, private val client: HttpC
 
     override suspend fun getCapabilities(): List<DeviceCapability>? {
         // FIXME it should be map
-        val deviceCapabilities: List<JsonDeviceCapability> = try {
-            client.get("http://${info.host}:${info.port}/api/capabilities").body()
+        val data: ByteArray = try {
+            client.get("http://${info.host}:${info.port}/api/capabilities").body<String>()
+                .decodeBase64Bytes()
         } catch (e: Exception) {
             return null
         }
+        val deviceCapabilities =
+            BinaryDeserializer(data.inputStream()).deserialize<List<JsonDeviceCapability>>()
+
+        if (deviceCapabilities == null) {
+            logger.debug("got null device caps http $identifier ${info.name}", this)
+            return null
+        }
+
         val res = deviceCapabilities.map {
             return@map HttpDeviceCapability(it, info, client)
         }

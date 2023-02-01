@@ -6,16 +6,14 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import cz.vasabi.myiot.backend.api.Data
+import cz.vasabi.myiot.backend.api.DataMessage
 import cz.vasabi.myiot.backend.database.CapabilityReadingDao
 import cz.vasabi.myiot.backend.logging.logger
-import cz.vasabi.myiot.ui.components.Reading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import java.time.Instant
 import javax.inject.Inject
 
 open class DeviceState(private val device: Device) : Device by device {
@@ -39,15 +37,16 @@ class DeviceCapabilityState(
     private val parent: DeviceConnection
 ) : DeviceCapability by deviceCapability {
     private val scope = CoroutineScope(Dispatchers.IO)
-    val responses: Channel<Data> = Channel()
+    val responses: Channel<DataMessage> = Channel()
 
     @Inject
     lateinit var readingDao: CapabilityReadingDao
-    val readings = mutableStateListOf<Reading>()
+    val readings = mutableStateListOf<DataMessage>()
 
     init {
         deviceCapability.onReceived = { value ->
             logger.debug("adding new value to channel $value $deviceCapability", this)
+            /*
             scope.launch {
                 if (deviceCapability.type == "int") {
                     readings.add(Reading(Instant.now(), value.value.toDouble().toFloat()))
@@ -64,6 +63,8 @@ class DeviceCapabilityState(
                 )
                 */
             }
+
+             */
             responses.send(value)
         }
     }

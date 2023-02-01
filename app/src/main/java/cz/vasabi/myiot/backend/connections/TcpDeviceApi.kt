@@ -1,30 +1,6 @@
 package cz.vasabi.myiot.backend.connections
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import cz.vasabi.myiot.backend.api.Data
-import cz.vasabi.myiot.backend.api.GenericHttpResponse
-import cz.vasabi.myiot.backend.api.GenericResponse
-import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
-import cz.vasabi.myiot.backend.database.TcpDeviceConnectionEntity
-import cz.vasabi.myiot.backend.logging.logger
-import io.ktor.network.selector.SelectorManager
-import io.ktor.network.sockets.Connection
-import io.ktor.network.sockets.aSocket
-import io.ktor.network.sockets.connection
-import io.ktor.network.sockets.isClosed
-import io.ktor.utils.io.readUTF8Line
-import io.ktor.utils.io.writeStringUtf8
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-
-/*
+/* FIXME
 
 protocol description
 
@@ -40,11 +16,13 @@ responses:
     value /switch {"value": true, "type": "bool"}
  */
 
+
+/*
 internal data class TcpResponse(
     override val value: String,
     override val type: String,
     val route: String
-) : GenericResponse
+)
 
 internal sealed interface TcpRequest {
     object Capabilities : TcpRequest
@@ -334,3 +312,4 @@ class TcpDeviceCapability(
         parent.removeRoute(this)
     }
 }
+ */

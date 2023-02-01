@@ -1,15 +1,12 @@
 package cz.vasabi.myiot.backend.connections
 
-import cz.vasabi.myiot.backend.api.Data
-import cz.vasabi.myiot.todo.DataType
+import cz.vasabi.myiot.backend.api.DataMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
-import kotlin.random.Random
-import kotlin.random.nextInt
 
 class MockDeviceConnection(
     private val deviceCapabilities: List<DeviceCapability>? = null,
@@ -37,7 +34,7 @@ class MockDeviceConnection(
         scope.cancel()
     }
 
-    override suspend fun getCapabilities(): List<DeviceCapability>? {
+    override suspend fun getCapabilities(): List<DeviceCapability> {
         return deviceCapabilities ?: listOf(
             MockDeviceCapability("/mock", "mock bool capability", "i dont do much", "bool"),
             MockDeviceCapability("/mock", "mock bool capability", "i dont do much", "bool"),
@@ -69,11 +66,11 @@ class MockDeviceCapability(
     override val name: String,
     override val description: String,
     override val type: String,
-    override var onReceived: suspend (Data) -> Unit = {}
+    override var onReceived: suspend (DataMessage) -> Unit = {}
 ) : DeviceCapability {
     override fun requestValue() {}
 
-    override fun setValue(value: Data) {}
+    override fun setValue(value: Any, type: String) {}
 
     override fun close() {}
 }
@@ -82,7 +79,7 @@ class MockIntCapability(
     override val route: String,
     override val name: String,
     override val description: String,
-    override var onReceived: suspend (Data) -> Unit = {}
+    override var onReceived: suspend (DataMessage) -> Unit = {}
 ) : DeviceCapability {
     override val type: String = "int"
     val scope = CoroutineScope(Dispatchers.IO)
@@ -90,7 +87,8 @@ class MockIntCapability(
     init {
         scope.launch {
             while (true) {
-                onReceived(Data.I(Random.nextInt(0..30)))
+                // TODO
+                // onReceived(Data.I(Random.nextInt(0..30)))
                 delay(500)
             }
         }
@@ -98,7 +96,7 @@ class MockIntCapability(
 
     override fun requestValue() {}
 
-    override fun setValue(value: Data) {}
+    override fun setValue(value: Any, type: String) {}
 
     override fun close() {}
 }

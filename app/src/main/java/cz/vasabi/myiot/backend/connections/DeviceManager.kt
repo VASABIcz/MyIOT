@@ -5,7 +5,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.vasabi.myiot.backend.database.AppDatabase
 import cz.vasabi.myiot.backend.database.HttpDeviceCapabilityEntity
-import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
 import cz.vasabi.myiot.backend.logging.logger
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +57,7 @@ class DeviceManager(
         httpConn.connect()
     }
 
+    /* FIXME
     private suspend fun loadTcpConn(device: DeviceState) {
         val conn = tcpConnectionDao.findConnection(device.identifier) ?: return
         println("loading connection $conn from database")
@@ -81,13 +81,15 @@ class DeviceManager(
         }
         tcpConn.connect()
     }
+     */
 
     init {
         scope.launch {
             deviceDao.getAll().forEach {
                 println("loading device $it from database")
                 val device = DeviceState(it)
-                loadTcpConn(device)
+                // FIXME
+                // loadTcpConn(device)
                 loadHttpConn(device)
                 // FIXME interesting https://stackoverflow.com/questions/66891349/java-lang-illegalstateexception-when-using-state-in-android-jetpack-compose
                 withContext(Dispatchers.Main) {
@@ -118,11 +120,13 @@ class DeviceManager(
                 httpConnectionDao.insertAll((info.parent as HttpDeviceConnection).toEntity())
             }
 
-            is TcpDeviceConnection -> {
-                tcpConnectionDao.insertAll((info.parent as TcpDeviceConnection).toEntity())
-            }
+            // FIXME
+            //is TcpDeviceConnection -> {
+            //    tcpConnectionDao.insertAll((info.parent as TcpDeviceConnection).toEntity())
+            //}
 
             is MockDeviceConnection -> {}
+            else -> TODO()
         }
 
         device.connections[info.connectionType] =
@@ -149,11 +153,12 @@ class DeviceManager(
                     httpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as HttpDeviceCapabilityEntity)
                 }
 
-                is TcpDeviceConnection -> {
-                    tcpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as TcpDeviceCapabilityEntity)
-                }
+                //is TcpDeviceConnection -> {
+                //   tcpCapabilityDao.insertAll(it.toEntity(conn.info.identifier) as TcpDeviceCapabilityEntity)
+                //}
 
                 is MockDeviceConnection -> {}
+                else -> TODO()
             }
         }
     }

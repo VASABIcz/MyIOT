@@ -1,10 +1,11 @@
 package cz.vasabi.myiot.backend.connections
 
 import android.net.nsd.NsdServiceInfo
-import cz.vasabi.myiot.backend.api.Data
+import cz.vasabi.myiot.backend.api.DataMessage
 import cz.vasabi.myiot.backend.database.DeviceEntity
 import cz.vasabi.myiot.backend.database.HttpDeviceCapabilityEntity
 import cz.vasabi.myiot.backend.database.HttpDeviceConnectionEntity
+import java.util.Base64
 
 enum class ConnectionType {
     Http,
@@ -28,8 +29,8 @@ interface DeviceInfo : Device {
 
 sealed interface DeviceCapability : BaseDeviceCapability {
     fun requestValue()
-    fun setValue(value: Data)
-    var onReceived: suspend (Data) -> Unit
+    fun setValue(value: Any, type: String)
+    var onReceived: suspend (DataMessage) -> Unit
     fun close()
 }
 
@@ -95,9 +96,6 @@ class NsdIpConnectionInfo(info: NsdServiceInfo) : IpConnectionInfo {
     override val name: String = info.serviceName
 }
 
-data class JsonDeviceCapability(
-    override val route: String,
-    override val name: String,
-    override val description: String,
-    override val type: String
-) : BaseDeviceCapability
+fun String.decode64(): ByteArray {
+    return Base64.getDecoder().decode(this)
+}
