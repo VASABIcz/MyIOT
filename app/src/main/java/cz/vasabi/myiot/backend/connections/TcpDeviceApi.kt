@@ -1,5 +1,29 @@
 package cz.vasabi.myiot.backend.connections
 
+import JsonDeviceCapability
+import cz.vasabi.myiot.backend.api.DataMessage
+import cz.vasabi.myiot.backend.database.TcpDeviceCapabilityEntity
+import cz.vasabi.myiot.backend.database.TcpDeviceConnectionEntity
+import cz.vasabi.myiot.backend.logging.logger
+import cz.vasabi.myiot.backend.serialization.BinaryDeserializer
+import cz.vasabi.myiot.backend.serialization.BinarySerializer
+import cz.vasabi.myiot.backend.serialization.serialize
+import io.ktor.network.selector.SelectorManager
+import io.ktor.network.sockets.Connection
+import io.ktor.network.sockets.aSocket
+import io.ktor.network.sockets.connection
+import io.ktor.network.sockets.isClosed
+import io.ktor.utils.io.readFully
+import io.ktor.utils.io.writeAvailable
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+
 /* FIXME
 
 protocol description
@@ -17,16 +41,12 @@ responses:
  */
 
 
-/*
-internal data class TcpResponse(
-    override val value: String,
-    override val type: String,
-    val route: String
-)
+
+data class TcpResponse(val route: String, val type: String, val value: ByteArray)
 
 internal sealed interface TcpRequest {
     object Capabilities : TcpRequest
-    class Post(val route: String, val data: String) : TcpRequest
+    class Post(val route: String, val data: Any) : TcpRequest
     class Get(val route: String) : TcpRequest
 }
 
@@ -55,10 +75,13 @@ internal class TcpConnectionManager(
         }
     }
 
-    suspend fun readLine(): String {
+    suspend fun readPacket(): ByteArray {
         while (true) {
             try {
-                return socket?.input?.readUTF8Line() ?: continue
+                val len = socket?.input?.readInt() ?: continue
+                val buf = ByteArray(len)
+                socket?.input?.readFully(buf)
+                return buf
             } catch (t: Throwable) {
                 logger.debug("socket readLine ${t.message}", this)
                 onConnectionChanged(ConnectionState.Disconnected)
@@ -67,10 +90,11 @@ internal class TcpConnectionManager(
         }
     }
 
-    suspend fun write(line: String) {
+    suspend fun writePacket(data: ByteArray) {
         while (true) {
             try {
-                socket?.output?.writeStringUtf8(line)
+                socket?.output?.writeInt(data.size)
+                socket?.output?.writeAvailable(data)
                 socket?.output?.flush()
                 return
             } catch (t: Throwable) {
@@ -87,7 +111,7 @@ internal class TcpConnectionManager(
     }
 }
 
-class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: ObjectMapper) :
+class TcpDeviceConnection(val info: IpConnectionInfo) :
     DeviceConnection {
     override val connectionType: ConnectionType = ConnectionType.Tcp
     override var onConnectionChanged: suspend (ConnectionState) -> Unit = {}
@@ -138,75 +162,72 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
 
         scope.launch {
             capability.forEach {
-                it.onReceived(message.toData())
+                it.onReceived(
+                    DataMessage(
+                        message.type,
+                        BinaryDeserializer(message.value.inputStream())
+                    )
+                )
             }
         }
     }
 
     private suspend fun socketReader() {
         while (true) {
-            val message = connManager.readLine()
-            logger.debug("message $message", this)
+            val res = connManager.readPacket()
+            val des = BinaryDeserializer(res.inputStream())
 
-            if (message.startsWith("capabilities")) {
-                handleCapabilitiesResult(message)
-            } else if (message.startsWith("value")) {
-                handleValueResult(message)
-            } else {
-                logger.error("tcp conn $this received unknown message: $message", this)
+            when (des.readString()) {
+                "capabilities" -> {
+                    val capabilities = mutableListOf<JsonDeviceCapability>()
+                    val capabilitiesCount = des.readInt()
+
+                    repeat(capabilitiesCount) {
+                        val name = des.readString()
+                        val route = des.readString()
+                        val description = des.readString()
+                        val type = des.readString()
+                        capabilities.add(JsonDeviceCapability(route, name, description, type))
+                    }
+                    val c = capabilitiesChannel.receive()
+                    c.complete(capabilities.map { TcpDeviceCapability(it, this) })
+                }
+
+                "value" -> {
+                    val route = des.readString()
+                    val type = des.readString()
+                    val remaining = des.array.readAllBytes()
+
+                    responseChannel.send(TcpResponse(route, type, remaining))
+                }
             }
         }
-    }
-
-    private suspend fun handleCapabilitiesResult(message: String) {
-        val striped = message.replace("capabilities ", "")
-        val res: List<JsonDeviceCapability> = try {
-            objectMapper.readValue(striped)
-        } catch (_: Throwable) {
-            logger.error("$message was invalid capability result", this)
-            // FIXME not sure about this
-            capabilitiesChannel.receive().complete(null)
-            return
-        }
-
-        val future = capabilitiesChannel.receive()
-
-        if (future.isCancelled) {
-            logger.error("we meet again", this)
-            return
-        }
-
-        future.complete(res.map {
-            TcpDeviceCapability(it, this)
-        })
-    }
-
-    private suspend fun handleValueResult(message: String) {
-        // value /switch {"value": true, "type": "bool"}
-        val striped = message.replace("value ", "")
-        val routeEnd = striped.indexOf(" ")
-        if (routeEnd == -1) {
-            logger.error("invalid value result $message", this)
-            return
-        }
-        val route = striped.slice(0 until routeEnd)
-        val payload = striped.slice(routeEnd + 1 until striped.length)
-        val data: GenericHttpResponse = try {
-            objectMapper.readValue(payload)
-        } catch (_: Throwable) {
-            logger.error("failed to parse generic response tcp $message , parsed: $payload", this)
-            return
-        }
-        responseChannel.send(TcpResponse(data.value, data.type, route))
     }
 
     private suspend fun handleRequests() {
         for (request in requestChannel) {
+            val serializer = BinarySerializer()
             when (request) {
-                TcpRequest.Capabilities -> connManager.write("capabilities\n")
-                is TcpRequest.Get -> connManager.write("get ${request.route}\n")
-                is TcpRequest.Post -> connManager.write("post ${request.route} ${request.data}\n")
+                TcpRequest.Capabilities -> {
+                    serializer.writeString("capabilities")
+                }
+
+                is TcpRequest.Get -> {
+                    serializer.writeString("get")
+                    serializer.writeString(request.route)
+                }
+
+                is TcpRequest.Post -> {
+                    serializer.writeString("post")
+                    serializer.writeString(request.route)
+                    val res = serializer.serialize(request.data)
+                    if (!res) {
+                        logger.warning("tcp failed to serialize ${request.data}", this)
+                        continue
+                    }
+                }
             }
+            connManager.writePacket(serializer.data.toByteArray())
             logger.debug("finished writing $request", this)
         }
     }
@@ -269,7 +290,7 @@ class TcpDeviceConnection(val info: IpConnectionInfo, private val objectMapper: 
         }
     }
 
-    fun setValue(route: String, value: String) {
+    fun setValue(route: String, value: Any) {
         scope.launch {
             requestChannel.send(TcpRequest.Post(route, value))
         }
@@ -302,14 +323,13 @@ class TcpDeviceCapability(
         parent.requestValue(route)
     }
 
-    override fun setValue(value: Data) {
-        parent.setValue(route, value.jsonBody)
+    override fun setValue(value: Any, type: String) {
+        parent.setValue(route, value)
     }
 
-    override var onReceived: suspend (Data) -> Unit = {}
+    override var onReceived: suspend (DataMessage) -> Unit = {}
 
     override fun close() {
         parent.removeRoute(this)
     }
 }
- */

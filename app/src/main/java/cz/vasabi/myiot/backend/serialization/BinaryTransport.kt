@@ -32,7 +32,7 @@ class BinarySerializer : Serializer {
 }
 
 class BinaryDeserializer(stream: InputStream) : Deserializer {
-    private val array = DataInputStream(stream)
+    val array = DataInputStream(stream)
     override fun readInt(): Int {
         return array.readInt().reverseByteOrder()
     }
