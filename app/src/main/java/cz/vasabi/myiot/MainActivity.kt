@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Color
 import android.os.Bundle
-import android.os.Looper
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,7 +29,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             this.window.statusBarColor = Color.BLACK
             AppTheme {
-                Looper.getMainLooper()
                 val nav = rememberNavController()
                 MainPage(nav)
             }

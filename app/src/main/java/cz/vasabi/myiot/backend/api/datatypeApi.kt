@@ -37,9 +37,10 @@ class DataMessage(val type: String, val data: Deserializer) {
     }
 }
 
-fun deserializeMsg(data: InputStream): DataMessage {
+fun deserializeMsg(data: InputStream): DataMessage? {
     val d = BinaryDeserializer(data)
-    return DataMessage(d.readString(), d)
+    val n = d.readString() ?: return null
+    return DataMessage(n, d)
 }
 
 fun serialize(type: String, value: Any): ByteArrayOutputStream {

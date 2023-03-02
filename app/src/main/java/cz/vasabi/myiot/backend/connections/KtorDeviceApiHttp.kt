@@ -35,9 +35,11 @@ class HttpDeviceCapability(
 
                 logger.debug(res.toString(), this)
 
-                val resValue: ByteArray = res.body()
+                val resValue: String = res.body()
                 logger.debug("received $resValue", this)
-                onReceived(deserializeMsg(resValue.inputStream()))
+                val msg = deserializeMsg(resValue.decodeBase64Bytes().inputStream())
+                    ?: return@launch logger.warning("malformed message", this)
+                onReceived(msg)
             } catch (e: Throwable) {
                 // FIXME
                 logger.debug(e.toString(), this)
@@ -49,10 +51,6 @@ class HttpDeviceCapability(
         scope.launch {
             println("serial $type $value")
             val data = serialize(type, value)
-            println("ser data ${data.size()} ${data.toByteArray().decodeToString()}")
-            data.toByteArray().forEach {
-                println("byte $it")
-            }
             val res = try {
                 logger.debug("sending POST http://${info.host}:${info.port}${route}", this)
                 client.post("http://${info.host}:${info.port}${route}") {
@@ -63,7 +61,8 @@ class HttpDeviceCapability(
             }
             logger.debug(res.toString(), this)
 
-            val resValue = deserializeMsg(res.body<ByteArray>().inputStream())
+            val resValue = deserializeMsg(res.body<String>().decodeBase64Bytes().inputStream())
+                ?: return@launch
             logger.debug("received $resValue", this)
             onReceived(resValue)
         }

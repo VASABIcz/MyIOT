@@ -4,6 +4,8 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.vasabi.myiot.backend.connections.DeviceConnection
+import cz.vasabi.myiot.backend.connections.NsdIpConnectionInfo
+import cz.vasabi.myiot.backend.connections.TcpDeviceConnection
 import cz.vasabi.myiot.backend.database.discovery.DeviceResolveManager
 import cz.vasabi.myiot.backend.database.discovery.DiscoveryService
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +30,7 @@ class TcpDeviceDiscoveryService(
 
         scope.launch {
             val res = serviceResolveManager.resolveAsync(service).await()
-            // onDeviceResolved(TcpDeviceConnection(NsdIpConnectionInfo(res), objectMapper))
+            onDeviceResolved(TcpDeviceConnection(NsdIpConnectionInfo(res)))
         }
     }
 

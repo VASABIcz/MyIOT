@@ -13,6 +13,7 @@ import io.ktor.network.sockets.Connection
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
 import io.ktor.network.sockets.isClosed
+import io.ktor.utils.io.bits.reverseByteOrder
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeAvailable
 import kotlinx.coroutines.CompletableDeferred
@@ -23,6 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.nio.ByteOrder
 
 /* FIXME
 
@@ -56,18 +58,19 @@ internal class TcpConnectionManager(
     var onConnectionChanged: suspend (ConnectionState) -> Unit
 ) {
     private val selectorManager = SelectorManager(Dispatchers.IO)
+
+    @Volatile
+    @get:Synchronized
+    @set:Synchronized
     private var socket: Connection? = null
 
     suspend fun reconnect() {
         if (socket?.socket?.isClosed == true) return
         while (true) {
             try {
-                socket = aSocket(selectorManager).tcp().connect(host, port) {
-                    noDelay = true
-                    sendBufferSize = 1
-                }.connection()
+                socket = aSocket(selectorManager).tcp().connect(host, port).connection()
                 onConnectionChanged(ConnectionState.Connected)
-                break
+                return
             } catch (t: Throwable) {
                 logger.warning("socket reconnect ${t.message}", this)
                 delay(1000)
@@ -78,7 +81,14 @@ internal class TcpConnectionManager(
     suspend fun readPacket(): ByteArray {
         while (true) {
             try {
-                val len = socket?.input?.readInt() ?: continue
+                val len = socket?.input?.readInt()?.let {
+                    if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) {
+                        it.reverseByteOrder()
+                    } else {
+                        it
+                    }
+                } ?: continue
+                println("allocating $len")
                 val buf = ByteArray(len)
                 socket?.input?.readFully(buf)
                 return buf
@@ -86,6 +96,7 @@ internal class TcpConnectionManager(
                 logger.debug("socket readLine ${t.message}", this)
                 onConnectionChanged(ConnectionState.Disconnected)
                 reconnect()
+                delay(1000)
             }
         }
     }
@@ -93,7 +104,11 @@ internal class TcpConnectionManager(
     suspend fun writePacket(data: ByteArray) {
         while (true) {
             try {
-                socket?.output?.writeInt(data.size)
+                if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) {
+                    socket?.output?.writeInt(data.size.reverseByteOrder())
+                } else {
+                    socket?.output?.writeInt(data.size)
+                }
                 socket?.output?.writeAvailable(data)
                 socket?.output?.flush()
                 return
@@ -177,16 +192,18 @@ class TcpDeviceConnection(val info: IpConnectionInfo) :
             val res = connManager.readPacket()
             val des = BinaryDeserializer(res.inputStream())
 
-            when (des.readString()) {
+            val msgType = des.readString()
+
+            when (msgType) {
                 "capabilities" -> {
                     val capabilities = mutableListOf<JsonDeviceCapability>()
-                    val capabilitiesCount = des.readInt()
+                    val capabilitiesCount = des.readInt() ?: continue
 
                     repeat(capabilitiesCount) {
-                        val name = des.readString()
-                        val route = des.readString()
-                        val description = des.readString()
-                        val type = des.readString()
+                        val route = des.readString() ?: return@repeat
+                        val name = des.readString() ?: return@repeat
+                        val description = des.readString() ?: return@repeat
+                        val type = des.readString() ?: return@repeat
                         capabilities.add(JsonDeviceCapability(route, name, description, type))
                     }
                     val c = capabilitiesChannel.receive()
@@ -194,13 +211,18 @@ class TcpDeviceConnection(val info: IpConnectionInfo) :
                 }
 
                 "value" -> {
-                    val route = des.readString()
-                    val type = des.readString()
-                    val remaining = des.array.readAllBytes()
+                    val route = des.readString() ?: continue
+                    val type = des.readString() ?: continue
+                    val remaining = des.array.readBytes()
 
                     responseChannel.send(TcpResponse(route, type, remaining))
                 }
+
+                else -> {
+                    println("unknown message type $msgType")
+                }
             }
+            des.array.close()
         }
     }
 
@@ -242,17 +264,17 @@ class TcpDeviceConnection(val info: IpConnectionInfo) :
     override suspend fun getCapabilities(): List<DeviceCapability>? {
         logger.debug("tcp requesting capabilities", this)
         val future = CompletableDeferred<List<DeviceCapability>?>()
-        logger.error("HUH", this)
+        println("i am waiting")
         requestChannel.send(TcpRequest.Capabilities)
+        println("i am 123")
         capabilitiesChannel.send(future)
-        logger.error("FUCK", this)
-        logger.error("GOOD", this)
-
+        println("i am waiting")
         val res = withTimeoutOrNull(1000) {
             future.await()
         }
 
 
+        logger.debug("KYS $res")
         logger.error("getCapabilities tcp $res", this)
 
         return res

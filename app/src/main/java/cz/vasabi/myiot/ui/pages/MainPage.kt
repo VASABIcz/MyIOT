@@ -29,7 +29,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 sealed class NavigationItem(var route: String, var icon: ImageVector, var title: String) {
-
     object Settings : NavigationItem("settings", Icons.Default.Settings, "Settings")
     object Discover : NavigationItem("discover", Icons.Default.Hub, "Discover")
     object Devices : NavigationItem("devices", Icons.Default.DevicesOther, "Devices")
@@ -59,7 +58,6 @@ fun BottomNavigationBar(nav: NavController) {
                             Box(modifier = Modifier.fillMaxWidth(0.6f).fillMaxHeight(0.5f).clip(
                                 RoundedCornerShape(40)).background(Color.Magenta))
                         }
-
                          */
                         Icon(
                             item.icon,
